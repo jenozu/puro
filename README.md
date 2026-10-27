@@ -1,6 +1,6 @@
 # Puro — SAP-export-to-Purolator Shipping Workstation
 
-> **Status: first offline Streamlit increment implemented (Excel/CSV import, Ship To review, SQLite persistence). Purolator shipment creation is NOT implemented or production-ready.**
+> **Status: carrier integration and batch workflow implemented with mocked tests; not live-tested, certified, or authorized for production. Carrier actions are disabled by default. Task 12 (controlled real-world verification) remains.**
 
 Puro is a proposed local-first Python/Streamlit workstation for shipping SAP Business One sales orders through Purolator E-Ship SOAP APIs **without live SAP/SQL access**. An authorized user exports SAP orders to XLSX/CSV, reviews the *order-level Ship To* addresses, confirms packages and billing, creates Purolator shipments, and saves printable labels and tracking PINs.
 
@@ -27,30 +27,29 @@ Puro is a proposed local-first Python/Streamlit workstation for shipping SAP Bus
 
 ## Current repository contents
 
-The repository includes a **runnable offline review application**, an importer/store and mock-only regression tests. It cannot yet create Purolator shipments, obtain live labels, or be treated as shipping-ready. No Purolator API calls have been executed from this repository.
+The repository includes the Streamlit order review UI, SQLite shipment journal, Purolator SOAP adapter and PDF-label workflow, all exercised with fictional test responses. **No live Purolator API shipments have been tested**, and you must not regard this build as operational until Task 12's authorized Development and Production acceptance tests pass.
 
-## Run the offline import/review application locally (when at your computer)
+## Run locally in an IT-approved environment (Task 12 only for carrier verification)
 
 Requirements: Windows or another supported Python environment, Python 3.11+, internet access to Purolator, an authorized Purolator E-Ship account and active Development/Production API credentials, and a properly structured SAP export.
 
 ```powershell
 git clone https://github.com/jenozu/puro.git
 cd puro
-py -3.11 -m venv .venv
-.venv\Scripts\Activate.ps1
-pip install -r requirements.txt
+python -m venv .venv
+.venv\Scripts\python.exe -m pip install -r requirements.txt
 Copy-Item .env.example .env
 # Add secrets locally to .env (NEVER to GitHub)
-streamlit run streamlit_app.py
+.venv\Scripts\python.exe -m streamlit run streamlit_app.py
 ```
 
-`streamlit_app.py`, `requirements.txt`, `puro/orders.py`, `puro/store.py` and offline tests now exist. The full SOAP client, batch shipping and label retrieval are **not yet implemented**. The app imports data and marks verified orders Ready **without calling Purolator**.
+The code includes `puro/carrier.py` (SOAP), `puro/payloads.py` (WSDL field mapping), `puro/journal.py`, `puro/shipping.py`, `puro/documents.py`, and `puro/batch.py`. Carrier integration is **disabled by default**. The application can import and review without touching Purolator.
 
 ### Configuration
 
 Copy [`.env.example`](.env.example) to a local `.env`. Add **only your own credentials locally**; the screenshot showing active API keys does not expose or authorize their use in this repository. Do not commit screenshots of key screens, customer shipments, labels, original Purolator confidential PDFs, private WSDL bundles, or real SAP exports.
 
-Suggested settings: `PUROLATOR_ENV=development` initially; `PUROLATOR_API_KEY`, `PUROLATOR_API_PASSWORD`, `PUROLATOR_ACCOUNT_NUMBER`, sender/warehouse address and phone; local storage paths. Do not put real values into example files.
+Suggested local settings: `PUROLATOR_ENV=development`, `PURO_ENABLE_CARRIER=false`, `PURO_PRODUCTION_APPROVED=false`, Purolator API key/password/account, warehouse name/street/phone and a private local `PUROLATOR_WSDL_DIR`. Do not set the carrier flags to true until approved operational verification; do not put real secret values into examples. The private WSDLs must be placed in the layout described in [BUILD_PLAN.md](docs/BUILD_PLAN.md).
 
 ## Task Master AI integration
 
@@ -85,7 +84,7 @@ SAP-export.xlsx → import/validate → normalized orders → review & confirm
                                   PINs + saved PDFs + history + reconciliation queue
 ```
 
-Suggested code layout when implemented: `app/` (UI), `puro/domain/` (schemas + rules), `puro/importers/`, `puro/carriers/`, `puro/storage/`, `tests/` (no real secrets/customer data). Avoid reviving the old monolithic Streamlit file as-is.
+Implemented modular packages include `puro/address.py`, `orders.py`, `store.py`, `journal.py`, `carrier.py`, `payloads.py`, `shipping.py`, `documents.py`, `batch.py` and `config.py`. Tests are in `tests/` with fictional data and mock responses.
 
 ## What works in the current increment
 
@@ -98,7 +97,7 @@ Suggested code layout when implemented: `app/` (UI), `puro/domain/` (schemas + r
 - Export reviewed order details as CSV for verification.
 - Run tests with `python -m pip install -r requirements-dev.txt` then `python -m pytest -q`.
 
-**Not yet supported:** `ValidateShipment`, `CreateShipment`, `GetDocuments`, live rate estimates, PDF labels, and reliable multi-parcel shipping. `Ready` means locally reviewed **only**.
+**Implemented but unverified against Purolator live systems:** `ValidateShipment`, `CreateShipment`, `GetDocuments`, duplicate safeguards, package/payer payloads, label-PDF archive, and batch exports. Multi-piece data models are tested with synthetic data; actual shipment and piece handling requires real Development tests. **Not implemented:** real rate estimates, live tracking, manifests, voiding UI, printer-specific formatting and international/customs. `Ready` means locally reviewed, not shipped.
 
 ## Definition of ready for Production
 
