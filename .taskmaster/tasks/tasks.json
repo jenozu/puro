@@ -71,12 +71,12 @@
         "id": 6,
         "title": "Build WSDL-driven Purolator SOAP client and mocked contracts",
         "description": "Use zeep/requests with separate Development/Production WSDL/credentials. Implement RequestContext 2.2 Shipping and 1.4 GetDocuments, typed SOAP fault/applicatio",
-        "status": "pending",
+        "status": "done",
         "dependencies": [
           1
         ],
         "priority": "high",
-        "details": "Use zeep/requests with separate Development/Production WSDL/credentials. Implement RequestContext 2.2 Shipping and 1.4 GetDocuments, typed SOAP fault/application response decoding and redaction. Keep proprietary WSDL privately deployed.",
+        "details": "Use zeep/requests with separate Development/Production WSDL/credentials. Implement RequestContext 2.2 Shipping and 1.4 GetDocuments, typed SOAP fault/application response decoding and redaction. Keep proprietary WSDL privately deployed.\n\nCOMPLETED: zeep SOAP transport, private WSDL source paths, RequestContext versions, HTTPS host/env restrictions, production confirmation requirement and sanitized unknown outcomes. Mocked contract tests and CI passed, PR #7. Live API credentials/real endpoints remain for Task 12.",
         "testStrategy": "Mock requests use correct structures/versions and never send Production traffic under normal tests; client distinguishes transport faults from application rejection.",
         "subtasks": []
       },
