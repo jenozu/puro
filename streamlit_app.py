@@ -6,24 +6,28 @@ from __future__ import annotations
 
 import csv
 from io import BytesIO, StringIO
-import os
-from pathlib import Path
 
 import pandas as pd
 import streamlit as st
 
+from puro.config import AppConfig, ConfigurationError
 from puro.orders import ImportProblem, parse_export, review_errors
 from puro.store import Store
 
 st.set_page_config(page_title="Puro Shipping Workstation", page_icon="📦", layout="wide")
 
-DATA_DIR = Path(os.environ.get("PURO_DATA_DIR", "local_data")).expanduser()
-store = Store(DATA_DIR / "puro.sqlite3")
+try:
+    config = AppConfig.from_environment()
+except ConfigurationError as exc:
+    st.error(str(exc))
+    st.stop()
+
+store = Store(config.data_dir / "puro.sqlite3")
 
 st.title("Puro | Shipping Workstation")
 st.caption("SAP export import and shipment preparation — review-only build, no Purolator API calls.")
 
-environment = os.environ.get("PUROLATOR_ENV", "development").lower()
+environment = config.environment
 if environment == "production":
     st.error("Production is configured, but this build has no carrier submission capability.")
 else:
