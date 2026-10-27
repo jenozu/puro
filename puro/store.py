@@ -217,3 +217,13 @@ class Store:
                 "SELECT status, COUNT(*) AS n FROM orders GROUP BY status"
             ).fetchall()
         return {r["status"]: r["n"] for r in rows}
+
+    def audit_events(self, limit: int = 50) -> list[dict[str, str]]:
+        """Display action metadata only; do not include source addresses or secrets."""
+        count = max(1, min(int(limit), 500))
+        with self._connect() as db:
+            rows = db.execute(
+                "SELECT doc_entry,action,occurred_at FROM audit_events "
+                "ORDER BY id DESC LIMIT ?", (count,)
+            ).fetchall()
+        return [dict(row) for row in rows]
