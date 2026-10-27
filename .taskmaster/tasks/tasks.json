@@ -84,13 +84,13 @@
         "id": 7,
         "title": "Implement shipment preflight, parcel mapping and payer validation",
         "description": "Normalize units to carrier-required units, map Sender/Receiver payer and account fields, validate service, sender/recipient/package references, use ValidateShip",
-        "status": "pending",
+        "status": "done",
         "dependencies": [
           4,
           6
         ],
         "priority": "high",
-        "details": "Normalize units to carrier-required units, map Sender/Receiver payer and account fields, validate service, sender/recipient/package references, use ValidateShipment where appropriate.",
+        "details": "Normalize units to carrier-required units, map Sender/Receiver payer and account fields, validate service, sender/recipient/package references, use ValidateShipment where appropriate.\n\nCOMPLETED: domestic sender/receiver WSDL field mapping, measured multi-piece lb/in parcels, payer account validation, phone normalization, pickup/service constraints and request digest, mocked CI green, PR #8.",
         "testStrategy": "Invalid addresses/zero weights/missing receiver account blocked before live carrier call; verified SOAP payload contains Ship To only.",
         "subtasks": []
       },
