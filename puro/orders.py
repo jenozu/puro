@@ -27,11 +27,12 @@ def _norm(s: Any) -> str:
 
 
 ALIASES: dict[str, tuple[str, ...]] = {
-    "doc_entry": ("DocEntry",),
-    "doc_num": ("DocNum",),
-    "card_code": ("CardCode",),
+    "doc_entry": ("DocEntry", "Internal Number"),
+    "doc_num": ("DocNum", "Document Number"),
+    "card_code": ("CardCode", "Customer/Vendor Code"),
     "customer_name": ("CustomerName", "CardName"),
     "customer_po": ("CustomerPO", "NumAtCard"),
+    "full_ship_to_address": ("FullShipToAddress",),
     "ship_to_code": ("ShipToCode",),
     "ship_to_name": ("ShipToName", "AddressNameS"),
     "street_no": ("ShipToStreetNo", "StreetNoS"),
@@ -161,9 +162,12 @@ def parse_export(file_bytes: bytes, filename: str) -> ParsedImport:
                 keep_default_na=False, engine="openpyxl",
             )
             names = {k.casefold(): k for k in sheets}
-            if "orders" not in names:
-                raise ImportProblem("Workbook must contain an 'Orders' worksheet")
-            orders_df = sheets[names["orders"]]
+            if "orders" in names:
+                orders_df = sheets[names["orders"]]
+            elif len(sheets) == 1:
+                orders_df = next(iter(sheets.values()))
+            else:
+                raise ImportProblem("Workbook must contain an 'Orders' worksheet when multiple sheets exist")
             lines_df = sheets.get(names["orderlines"]) if "orderlines" in names else None
         else:
             raise ImportProblem("Upload an .xlsx or .csv file (not .xls/.xlsm)")
@@ -180,8 +184,9 @@ def parse_export(file_bytes: bytes, filename: str) -> ParsedImport:
     needed = {"doc_entry", "doc_num", "card_code", "customer_name"}
     if needed - m.keys():
         raise ImportProblem(f"Missing columns: {', '.join(sorted(needed - m.keys()))}")
-    if not any(f in m for f in ("street", "city", "postal_code", "country")):
-        raise ImportProblem("No RDR12 Ship To columns detected; Bill To data is not accepted")
+    full_address_mode = "full_ship_to_address" in m
+    if not full_address_mode and not any(f in m for f in ("street", "city", "postal_code", "country")):
+        raise ImportProblem("No approved Ship To columns detected; Bill To data is not accepted")
 
     issues: list[str] = []
     line_codes: dict[str, set[str]] = {}
@@ -222,21 +227,41 @@ def parse_export(file_bytes: bytes, filename: str) -> ParsedImport:
         if (status and status not in {"O", "OPEN"}) or cancelled in {"Y", "YES"}:
             issues.append(f"Row {int(index)+2}: closed/cancelled order; skipped")
             continue
-        record["ship_to_name"] = record["ship_to_name"] or record["customer_name"]
+        if full_address_mode:
+            # ORDR.Address2 is the sole source for destination data in this format.
+            # No parsing guess is used for carrier submission.
+            for key in ("ship_to_name", "street_no", "street", "building", "address2",
+                        "address3", "city", "province", "postal_code", "country"):
+                record[key] = ""
+            name = record["customer_name"].strip()
+            record["cash_sale"] = bool(re.fullmatch(r"cash\s+sale", name, re.I))
+            if not record["cash_sale"]:
+                record["ship_to_name"] = name
+            # Even regular customer names do not mean the street/city can be guessed.
+            record["address_review_pending"] = True
+        else:
+            record["ship_to_name"] = record["ship_to_name"] or record["customer_name"]
+            record["address_review_pending"] = False
         codes = line_codes.get(entry, set())
         header = record["ship_to_code"].casefold()
         record["line_conflict"] = bool(
             len(codes) > 1 or (header and codes and codes != {header})
         )
-        record["source_address"] = {
-            k: record[k] for k in (
-                "ship_to_code", "ship_to_name", "street_no", "street", "building",
-                "address2", "address3", "city", "province", "postal_code", "country"
-            )
-        }
+        record["source_address"] = (
+            {"full_ship_to_address": record["full_ship_to_address"]}
+            if full_address_mode else {
+                k: record[k] for k in (
+                    "ship_to_code", "ship_to_name", "street_no", "street",
+                    "building", "address2", "address3", "city", "province",
+                    "postal_code", "country"
+                )
+            }
+        )
         record.update(DEFAULT_PACKAGE)
         record["source_row"] = int(index) + 2
         record["import_warnings"] = validate_address(record)
+        if full_address_mode and not record["full_ship_to_address"]:
+            record["import_warnings"].append("Missing FullShipToAddress from ORDR.Address2")
         orders.append(record)
     unseen_line_orders = sorted(set(line_codes) - seen)
     if unseen_line_orders:
