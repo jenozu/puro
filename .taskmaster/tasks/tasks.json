@@ -1,0 +1,187 @@
+{
+  "master": {
+    "tasks": [
+      {
+        "id": 1,
+        "title": "Bootstrap Python app, configuration and test infrastructure",
+        "description": "Create Python 3.11+ package, Streamlit entrypoint, dependency lock/requirements, typed configuration, Development default, sanitised logging, pytest unit suite ",
+        "status": "pending",
+        "dependencies": [],
+        "priority": "high",
+        "details": "Create Python 3.11+ package, Streamlit entrypoint, dependency lock/requirements, typed configuration, Development default, sanitised logging, pytest unit suite and no-secret checks.",
+        "testStrategy": "Start the app with no SAP/SQL driver, validate .env startup errors without exposing credentials and pass CI/mock-only test suite.",
+        "subtasks": []
+      },
+      {
+        "id": 2,
+        "title": "Implement SQLite schema, migrations and durable shipment journal",
+        "description": "Create imports, orders, shipments, shipment_pieces, attempts, documents and audit_events tables",
+        "status": "pending",
+        "dependencies": [
+          1
+        ],
+        "priority": "high",
+        "details": "Create imports, orders, shipments, shipment_pieces, attempts, documents and audit_events tables; uniqueness constraints and atomic transactions; restart/backup migration tests.",
+        "testStrategy": "Reload a saved draft/successful shipment with all identifiers after process restart; concurrent conflicting writes fail safely.",
+        "subtasks": []
+      },
+      {
+        "id": 3,
+        "title": "Implement XLSX/CSV SAP order importer and column aliases",
+        "description": "Parse Orders and optional OrderLines",
+        "status": "pending",
+        "dependencies": [
+          1,
+          2
+        ],
+        "priority": "high",
+        "details": "Parse Orders and optional OrderLines; normalize DocEntry/DocNum/strings, headers, statuses; preserve import provenance; avoid unsafe formulas/macros/path use; repeated imports must preserve shipped rows.",
+        "testStrategy": "Synthetic workbook loads correctly; missing/ambiguous columns return row-specific errors; duplicate imports do not erase shipment state.",
+        "subtasks": []
+      },
+      {
+        "id": 4,
+        "title": "Enforce order-level Ship To address and line-level destination rules",
+        "description": "Map RDR12 *S shipping columns exclusively",
+        "status": "pending",
+        "dependencies": [
+          3
+        ],
+        "priority": "high",
+        "details": "Map RDR12 *S shipping columns exclusively; keep CRD1 selected Ship To as optional reviewed reference; never use *B billing. Validate province/country/postal/units; block multi-destination orders pending explicit split.",
+        "testStrategy": "A deliberately different Bill To never appears in recipient payload; missing RDR12 fields and multiple line ShipToCode combinations block shipping.",
+        "subtasks": []
+      },
+      {
+        "id": 5,
+        "title": "Build import, orders, destination review and package editing UI",
+        "description": "Streamlit import, search/select, source vs override, per-package measured weight/dimensions, service/payer, final address preview, explicit destination correcti",
+        "status": "pending",
+        "dependencies": [
+          2,
+          3,
+          4
+        ],
+        "priority": "high",
+        "details": "Streamlit import, search/select, source vs override, per-package measured weight/dimensions, service/payer, final address preview, explicit destination correction and Production confirmation.",
+        "testStrategy": "Reviewer can import and select a batch, amend an address with audit trail, and cannot continue with unresolved receiver issues.",
+        "subtasks": []
+      },
+      {
+        "id": 6,
+        "title": "Build WSDL-driven Purolator SOAP client and mocked contracts",
+        "description": "Use zeep/requests with separate Development/Production WSDL/credentials. Implement RequestContext 2.2 Shipping and 1.4 GetDocuments, typed SOAP fault/applicatio",
+        "status": "pending",
+        "dependencies": [
+          1
+        ],
+        "priority": "high",
+        "details": "Use zeep/requests with separate Development/Production WSDL/credentials. Implement RequestContext 2.2 Shipping and 1.4 GetDocuments, typed SOAP fault/application response decoding and redaction. Keep proprietary WSDL privately deployed.",
+        "testStrategy": "Mock requests use correct structures/versions and never send Production traffic under normal tests; client distinguishes transport faults from application rejection.",
+        "subtasks": []
+      },
+      {
+        "id": 7,
+        "title": "Implement shipment preflight, parcel mapping and payer validation",
+        "description": "Normalize units to carrier-required units, map Sender/Receiver payer and account fields, validate service, sender/recipient/package references, use ValidateShip",
+        "status": "pending",
+        "dependencies": [
+          4,
+          6
+        ],
+        "priority": "high",
+        "details": "Normalize units to carrier-required units, map Sender/Receiver payer and account fields, validate service, sender/recipient/package references, use ValidateShipment where appropriate.",
+        "testStrategy": "Invalid addresses/zero weights/missing receiver account blocked before live carrier call; verified SOAP payload contains Ship To only.",
+        "subtasks": []
+      },
+      {
+        "id": 8,
+        "title": "Implement durable safe CreateShipment and reconciliation",
+        "description": "Journal attempt before any CreateShipment",
+        "status": "pending",
+        "dependencies": [
+          2,
+          5,
+          6,
+          7
+        ],
+        "priority": "high",
+        "details": "Journal attempt before any CreateShipment; transaction lock/uniqueness, per-order batch grouping, persisted shipment/piece PINs, separate rejected vs uncertain result handling, manual reconciliation workflow.",
+        "testStrategy": "Double click/reload/same order import triggers at most one authorized create; timeout after send becomes needs_reconciliation without automatic retry.",
+        "subtasks": []
+      },
+      {
+        "id": 9,
+        "title": "Implement GetDocuments and verified PDF archive",
+        "description": "Retrieve PDF after successful shipment, support documented synchronous document/URL status paths, decode/verify bytes, atomic local write and checksum",
+        "status": "pending",
+        "dependencies": [
+          6,
+          8
+        ],
+        "priority": "high",
+        "details": "Retrieve PDF after successful shipment, support documented synchronous document/URL status paths, decode/verify bytes, atomic local write and checksum; persist piece PIN links and label_ready state only when saved.",
+        "testStrategy": "Successful request creates verifiable PDF retrievable after restart; pending/error returns non-ready status; multiple pieces retain all label associations.",
+        "subtasks": []
+      },
+      {
+        "id": 10,
+        "title": "Implement batch execution, shipping history, results exports and downloads",
+        "description": "Process orders independently, persist each result immediately, show progress/status, CSV of PINs, individual PDFs and batch ZIP from local archive",
+        "status": "pending",
+        "dependencies": [
+          5,
+          8,
+          9
+        ],
+        "priority": "high",
+        "details": "Process orders independently, persist each result immediately, show progress/status, CSV of PINs, individual PDFs and batch ZIP from local archive; preserve successes on partial failure.",
+        "testStrategy": "Partially failed batch is resumable without resending successes; downloads and history survive restart.",
+        "subtasks": []
+      },
+      {
+        "id": 11,
+        "title": "Automated safety and acceptance test coverage",
+        "description": "Implement test matrix A01-A13 using fictional fixtures and mocked SOAP, integration tests for SQLite restart, page state, environment segregation, malformed imp",
+        "status": "pending",
+        "dependencies": [
+          4,
+          7,
+          8,
+          9,
+          10
+        ],
+        "priority": "high",
+        "details": "Implement test matrix A01-A13 using fictional fixtures and mocked SOAP, integration tests for SQLite restart, page state, environment segregation, malformed imports and redaction; secret scan.",
+        "testStrategy": "All required tests pass; CI never uses Production credentials or requests; manual carrier verification is separately gated.",
+        "subtasks": []
+      },
+      {
+        "id": 12,
+        "title": "Controlled Development validation and supervised Production go-live",
+        "description": "With operator approval, validate Purolator Dev credentials, real test response/label, selected service and sender",
+        "status": "pending",
+        "dependencies": [
+          11
+        ],
+        "priority": "high",
+        "details": "With operator approval, validate Purolator Dev credentials, real test response/label, selected service and sender; verify key/account eligibility, printer layout and scanned PDF. Do exactly one approved Production shipment, document operational signoff.",
+        "testStrategy": "Approved live labels match Ship To and carton/PIN counts; reconciliation runbook tested; shipment charges and void rules acknowledged. No unattended live calls.",
+        "subtasks": []
+      },
+      {
+        "id": 13,
+        "title": "Post-MVP rates, availability, void/manifest and printer enhancements",
+        "description": "Add GetFullEstimate, GetServicesOptions and valid service selection",
+        "status": "pending",
+        "dependencies": [
+          12
+        ],
+        "priority": "medium",
+        "details": "Add GetFullEstimate, GetServicesOptions and valid service selection; third-party payer only if supported; Voids and manifests with confirmations, thermal ZPL after printer/label validation. Scope international separately.",
+        "testStrategy": "No regressions in MVP safety tests; stale estimates invalidated on shipment edits; optional services feature-flagged.",
+        "subtasks": []
+      }
+    ]
+  }
+}
