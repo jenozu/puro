@@ -1,0 +1,22 @@
+name: Validate planning and Task Master backlog
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  docs-and-taskmaster:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Validate Task Master structure, dependencies and required docs
+        run: python scripts/validate_taskmaster.py
