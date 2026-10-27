@@ -67,6 +67,9 @@ def _mapped(df: pd.DataFrame, aliases: dict[str, tuple[str, ...]]) -> dict[str, 
         matches = []
         for option in options:
             matches.extend(labels.get(_norm(option), []))
+        # Multiple aliases can normalize to the *same* physical column,
+        # e.g. CANCELED and Canceled. Count each actual column only once.
+        matches = list(dict.fromkeys(matches))
         if len(matches) > 1:
             raise ImportProblem(f"Ambiguous columns for {field}: {', '.join(matches)}")
         if matches:
