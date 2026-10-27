@@ -56,14 +56,14 @@
         "id": 5,
         "title": "Build import, orders, destination review and package editing UI",
         "description": "Streamlit import, search/select, source vs override, per-package measured weight/dimensions, service/payer, final address preview, explicit destination correcti",
-        "status": "pending",
+        "status": "done",
         "dependencies": [
           2,
           3,
           4
         ],
         "priority": "high",
-        "details": "Streamlit import, search/select, source vs override, per-package measured weight/dimensions, service/payer, final address preview, explicit destination correction and Production confirmation.\n\nPROGRESS NOTE — 2026-10-27 audit: Streamlit Import/Orders/Review/History pages, editable address and carton drafts, review-ready confirmation, and CSV export exist. UI remains offline and single-parcel; full batch selection, advanced audit controls and production shipment review are not done. NOT done.",
+        "details": "Streamlit import, search/select, source vs override, per-package measured weight/dimensions, service/payer, final address preview, explicit destination correction and Production confirmation.\n\nPROGRESS NOTE — 2026-10-27 audit: Streamlit Import/Orders/Review/History pages, editable address and carton drafts, review-ready confirmation, and CSV export exist. UI remains offline and single-parcel; full batch selection, advanced audit controls and production shipment review are not done. NOT done.\n\nCOMPLETED: operator order-selection batch staging, reviewed receiver snapshot, persistent draft/ready flow and audit-event viewer; Streamlit app tests green, PR #6. Live carrier action correctly remains separate under Tasks 8–10.",
         "testStrategy": "Reviewer can import and select a batch, amend an address with audit trail, and cannot continue with unresolved receiver issues.",
         "subtasks": []
       },
