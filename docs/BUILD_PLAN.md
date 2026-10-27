@@ -115,3 +115,20 @@ tests/{unit,contracts,fixtures}/
 - SOAP chosen to leverage supplied WSDLs and active account, REST migration postponed.
 - Local SQLite chosen over session state; hosted app security out of initial scope.
 - Real carrier testing gated; no production connectivity assumed from key status alone.
+
+## Private WSDL local deployment (after approval)
+
+The WSDL bundle was supplied outside GitHub and may contain proprietary documentation. Do **not** commit it. The SOAP client expects a private local layout:
+
+```text
+PUROLATOR_WSDL_DIR/
+  Development/
+    ShippingService.wsdl
+    ShippingDocumentsService.wsdl
+    EstimatingService.wsdl
+    ServiceAvailabilityService.wsdl
+  Production/
+    (same four filenames)
+```
+
+WSDL endpoint hostnames are checked against `devwebservices.purolator.com` and `webservices.purolator.com`. The carrier adapter defaults to the local settings' Development environment and never invokes Production unless explicit operator approval is passed. Do not call the adapter from the UI until Task 8 has implemented the safe attempt journal and final review gate.

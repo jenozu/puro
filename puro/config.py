@@ -21,6 +21,7 @@ class AppConfig:
     environment: str = "development"
     data_dir: Path = Path("local_data")
     labels_dir: Path = Path("local_data/labels")
+    wsdl_dir: Path = Path("private_wsdl")
     sender_name: str = ""
     sender_street_no: str = ""
     sender_street: str = ""
@@ -50,6 +51,7 @@ class AppConfig:
             environment=env,
             data_dir=directory,
             labels_dir=labels,
+            wsdl_dir=Path(os.getenv("PUROLATOR_WSDL_DIR", "private_wsdl")).expanduser(),
             sender_name=os.getenv("DEFAULT_SENDER_NAME", "").strip(),
             sender_street_no=os.getenv("DEFAULT_SENDER_STREET_NO", "").strip(),
             sender_street=os.getenv("DEFAULT_SENDER_STREET", "").strip(),
