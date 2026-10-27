@@ -8,7 +8,7 @@
         "status": "in-progress",
         "dependencies": [],
         "priority": "high",
-        "details": "Create Python 3.11+ package, Streamlit entrypoint, dependency lock/requirements, typed configuration, Development default, sanitised logging, pytest unit suite and no-secret checks. Initial offline Streamlit importer and SQLite skeleton committed; environment/contract tests and live carrier integration remain outstanding.",
+        "details": "Create Python 3.11+ package, Streamlit entrypoint, dependency lock/requirements, typed configuration, Development default, sanitised logging, pytest unit suite and no-secret checks. Initial offline Streamlit importer and SQLite skeleton committed; environment/contract tests and live carrier integration remain outstanding.\n\nPROGRESS NOTE — 2026-10-27 audit: Streamlit entrypoint, dependency files, Python package, and GitHub Actions pytest workflow committed. Offline tests passed (12). Still missing typed settings, redacted structured logging, and full foundation completion checks. KEEP in-progress.",
         "testStrategy": "Start the app with no SAP/SQL driver, validate .env startup errors without exposing credentials and pass CI/mock-only test suite.",
         "subtasks": []
       },
@@ -21,7 +21,7 @@
           1
         ],
         "priority": "high",
-        "details": "Create imports, orders, shipments, shipment_pieces, attempts, documents and audit_events tables; uniqueness constraints and atomic transactions; restart/backup migration tests.",
+        "details": "Create imports, orders, shipments, shipment_pieces, attempts, documents and audit_events tables; uniqueness constraints and atomic transactions; restart/backup migration tests.\n\nPROGRESS NOTE — 2026-10-27 audit: SQLite store includes imports/orders/audit records plus placeholder shipments/attempts/pieces/documents tables. Reimport preservation and restart tests exist. Still missing migrations, atomic non-idempotent carrier request journal, uniqueness/locking guards, and document persistence implementation. NOT done.",
         "testStrategy": "Reload a saved draft/successful shipment with all identifiers after process restart; concurrent conflicting writes fail safely.",
         "subtasks": []
       },
@@ -35,7 +35,7 @@
           2
         ],
         "priority": "high",
-        "details": "Parse Orders and optional OrderLines; normalize DocEntry/DocNum/strings, headers, statuses; preserve import provenance; avoid unsafe formulas/macros/path use; repeated imports must preserve shipped rows.",
+        "details": "Parse Orders and optional OrderLines; normalize DocEntry/DocNum/strings, headers, statuses; preserve import provenance; avoid unsafe formulas/macros/path use; repeated imports must preserve shipped rows.\n\nPROGRESS NOTE — 2026-10-27 audit: XLSX Orders/optional OrderLines plus CSV parsing implemented, SAP alias mapping, import validation, duplicate DocEntry handling, file-size cap, source checksum and open-order checks; template downloadable. Still need comprehensive mapping cases, row errors, validated source update policy and fuller fixtures. NOT done.",
         "testStrategy": "Synthetic workbook loads correctly; missing/ambiguous columns return row-specific errors; duplicate imports do not erase shipment state.",
         "subtasks": []
       },
@@ -48,7 +48,7 @@
           3
         ],
         "priority": "high",
-        "details": "Map RDR12 *S shipping columns exclusively; keep CRD1 selected Ship To as optional reviewed reference; never use *B billing. Validate province/country/postal/units; block multi-destination orders pending explicit split.",
+        "details": "Map RDR12 *S shipping columns exclusively; keep CRD1 selected Ship To as optional reviewed reference; never use *B billing. Validate province/country/postal/units; block multi-destination orders pending explicit split.\n\nPROGRESS NOTE — 2026-10-27 audit: RDR12 *S fields enforced, *B fields excluded, Canadian postal/province checks and line-level destination conflict detection, with regression tests. Carrier payload mapping and full address/multi-destination handling remain. NOT done.",
         "testStrategy": "A deliberately different Bill To never appears in recipient payload; missing RDR12 fields and multiple line ShipToCode combinations block shipping.",
         "subtasks": []
       },
@@ -63,7 +63,7 @@
           4
         ],
         "priority": "high",
-        "details": "Streamlit import, search/select, source vs override, per-package measured weight/dimensions, service/payer, final address preview, explicit destination correction and Production confirmation.",
+        "details": "Streamlit import, search/select, source vs override, per-package measured weight/dimensions, service/payer, final address preview, explicit destination correction and Production confirmation.\n\nPROGRESS NOTE — 2026-10-27 audit: Streamlit Import/Orders/Review/History pages, editable address and carton drafts, review-ready confirmation, and CSV export exist. UI remains offline and single-parcel; full batch selection, advanced audit controls and production shipment review are not done. NOT done.",
         "testStrategy": "Reviewer can import and select a batch, amend an address with audit trail, and cannot continue with unresolved receiver issues.",
         "subtasks": []
       },
@@ -152,7 +152,7 @@
           10
         ],
         "priority": "high",
-        "details": "Implement test matrix A01-A13 using fictional fixtures and mocked SOAP, integration tests for SQLite restart, page state, environment segregation, malformed imports and redaction; secret scan.",
+        "details": "Implement test matrix A01-A13 using fictional fixtures and mocked SOAP, integration tests for SQLite restart, page state, environment segregation, malformed imports and redaction; secret scan.\n\nPROGRESS NOTE — 2026-10-27 audit: 12 offline import/SQLite tests passed in GitHub Actions before the current review. The full carrier, timeout, duplicate-submission and label acceptance suite has not yet been implemented. NOT done.",
         "testStrategy": "All required tests pass; CI never uses Production credentials or requests; manual carrier verification is separately gated.",
         "subtasks": []
       },
