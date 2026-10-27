@@ -114,6 +114,17 @@ def test_reimport_preserves_confirmed_order(tmp_path):
     assert reloaded.get_order("10001")["data"]["weight_lb"] == 5.0
 
 
+
+def test_original_ship_to_snapshot_remains_after_manual_edit(tmp_path):
+    store = Store(tmp_path / "orders.sqlite3")
+    parsed = parse_export(workbook([valid_row()]), "orders.xlsx")
+    store.import_orders(parsed, "orders.xlsx")
+    store.save_draft("10001", {"street": "Changed Avenue"})
+    saved = store.get_order("10001")["data"]
+    assert saved["street"] == "Changed Avenue"
+    assert saved["source_address"]["street"] == "Warehouse Lane"
+    assert saved["source_address"]["city"] == "Ottawa"
+
 def test_address_override_revokes_review(tmp_path):
     store = Store(tmp_path / "orders.sqlite3")
     data = parse_export(workbook([valid_row()]), "orders.xlsx")
