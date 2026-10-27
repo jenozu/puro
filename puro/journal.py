@@ -141,10 +141,11 @@ class ShipmentJournal:
                 (row["doc_entry"], f"shipment_{target}", _time()),
             )
 
-    def mark_unknown(self, shipment_id: str, reason_code: str = "unknown_response") -> None:
-        """Network timeout/connection failure => never automatically retry."""
+    def mark_unknown(self, shipment_id: str, reason_code: str = "unknown_response",
+                     shipment_pin: str | None = None) -> None:
+        """Network uncertainty => never automatically retry; keep known PIN."""
         self._transition(shipment_id, "creating", "needs_reconciliation",
-                         error=reason_code, attempt_state="unknown")
+                         pin=shipment_pin, error=reason_code, attempt_state="unknown")
 
     def mark_rejected(self, shipment_id: str, code: str) -> None:
         """Use only for a definitive carrier rejection (not a timeout)."""
