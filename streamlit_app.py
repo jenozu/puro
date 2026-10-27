@@ -11,6 +11,7 @@ import pandas as pd
 import streamlit as st
 
 from puro.config import AppConfig, ConfigurationError
+from puro.auditlog import configure_logging, log_event
 from puro.orders import ImportProblem, parse_export, review_errors
 from puro.store import Store
 
@@ -22,7 +23,9 @@ except ConfigurationError as exc:
     st.error(str(exc))
     st.stop()
 
+configure_logging()
 store = Store(config.data_dir / "puro.sqlite3")
+log_event("app_initialized", config, environment=config.environment, status="review_only")
 
 st.title("Puro | Shipping Workstation")
 st.caption("SAP export import and shipment preparation — review-only build, no Purolator API calls.")
