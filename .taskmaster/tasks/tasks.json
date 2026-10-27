@@ -29,13 +29,13 @@
         "id": 3,
         "title": "Implement XLSX/CSV SAP order importer and column aliases",
         "description": "Parse Orders and optional OrderLines",
-        "status": "pending",
+        "status": "done",
         "dependencies": [
           1,
           2
         ],
         "priority": "high",
-        "details": "Parse Orders and optional OrderLines; normalize DocEntry/DocNum/strings, headers, statuses; preserve import provenance; avoid unsafe formulas/macros/path use; repeated imports must preserve shipped rows.\n\nPROGRESS NOTE — 2026-10-27 audit: XLSX Orders/optional OrderLines plus CSV parsing implemented, SAP alias mapping, import validation, duplicate DocEntry handling, file-size cap, source checksum and open-order checks; template downloadable. Still need comprehensive mapping cases, row errors, validated source update policy and fuller fixtures. NOT done.",
+        "details": "Parse Orders and optional OrderLines; normalize DocEntry/DocNum/strings, headers, statuses; preserve import provenance; avoid unsafe formulas/macros/path use; repeated imports must preserve shipped rows.\n\nPROGRESS NOTE — 2026-10-27 audit: XLSX Orders/optional OrderLines plus CSV parsing implemented, SAP alias mapping, import validation, duplicate DocEntry handling, file-size cap, source checksum and open-order checks; template downloadable. Still need comprehensive mapping cases, row errors, validated source update policy and fuller fixtures. NOT done.\n\nCOMPLETED: Orders/OrderLines XLSX and CSV, SAP aliases, source provenance, strict identity/status checks, oversized/invalid workbook rejection, duplicate detection; edgecase CI passed, PR #4.",
         "testStrategy": "Synthetic workbook loads correctly; missing/ambiguous columns return row-specific errors; duplicate imports do not erase shipment state.",
         "subtasks": []
       },
