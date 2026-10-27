@@ -15,6 +15,11 @@ from puro.auditlog import configure_logging, log_event
 from puro.address import recipient_snapshot, AddressProblem
 from puro.orders import ImportProblem, parse_export, review_errors
 from puro.store import Store
+from puro.journal import ShipmentJournal
+from puro.batch import BatchRunner, history as shipment_history, shipment_history_csv, label_zip
+from puro.carrier import PurolatorSOAP, CarrierConfigurationError
+from puro.shipping import ShippingCoordinator
+from puro.documents import LabelService
 
 st.set_page_config(page_title="Puro Shipping Workstation", page_icon="📦", layout="wide")
 
@@ -25,17 +30,18 @@ except ConfigurationError as exc:
     st.stop()
 
 configure_logging()
-store = Store(config.data_dir / "puro.sqlite3")
+journal = ShipmentJournal(config.data_dir / "puro.sqlite3")
+store = journal.store
 log_event("app_initialized", config, environment=config.environment, status="review_only")
 
 st.title("Puro | Shipping Workstation")
-st.caption("SAP export import and shipment preparation — review-only build, no Purolator API calls.")
+st.caption("SAP export shipping workstation — carrier submission is disabled by default.")
 
 environment = config.environment
 if environment == "production":
-    st.error("Production is configured, but this build has no carrier submission capability.")
-else:
-    st.info("Carrier integration is not connected. Reviewing an order does NOT create a shipment.")
+    st.warning("PRODUCTION environment selected. Shipment creation remains locked until explicitly authorized.")
+elif not config.carrier_enabled:
+    st.info("Offline preparation mode: Purolator calls are disabled. Reviewing an order does NOT create a shipment.")
 
 view = st.sidebar.radio(
     "Workspace", ["Import SAP export", "Orders", "Review a shipment", "History & status"],
@@ -330,10 +336,72 @@ elif view == "History & status":
                 "Local errors": "; ".join(problems) or "None",
             })
         st.dataframe(pd.DataFrame(preview), use_container_width=True, hide_index=True)
-        st.warning("This batch is for review ONLY. There is no 'Ship' action in this build.")
+        ready_batch = [o["doc_entry"] for o in store.list_orders()
+                       if o["doc_entry"] in batch and o["status"] == "ready"]
+        if not config.carrier_enabled:
+            st.info("Carrier execution is OFF. Set up and authorize the local API environment before attempting to ship.")
+        else:
+            st.markdown("#### Carrier submission — explicit action only")
+            selected_pickup = st.selectbox(
+                "Purolator pickup arrangement", ["Select...", "DropOff", "PreScheduled"]
+            )
+            all_ready = len(ready_batch) == len(batch) and bool(batch)
+            if not all_ready:
+                st.warning("All staged orders must be locally confirmed Ready before carrier submission.")
+            missing = config.missing_shipping_settings()
+            if missing:
+                st.error("Local shipping settings incomplete: " + ", ".join(missing))
+            if environment == "production" and not config.production_authorized:
+                st.error("Production is locked: authorization must first be recorded locally after controlled sign-off.")
+            confirmed = st.checkbox(
+                "I approve these specific carrier shipment requests "
+                + ("as LIVE, potentially chargeable shipments." if environment == "production"
+                   else "in the Purolator DEVELOPMENT environment.")
+            )
+            allowed = (
+                all_ready and not missing and selected_pickup != "Select..."
+                and confirmed and (environment != "production" or config.production_authorized)
+            )
+            if st.button("Create selected Purolator shipments", disabled=not allowed,
+                         type="primary"):
+                try:
+                    carrier = PurolatorSOAP(config, config.wsdl_dir)
+                    coordinator = ShippingCoordinator(config, journal, carrier)
+                    labels = LabelService(config, journal, carrier)
+                    with st.spinner("Processing reviewed shipments"):
+                        results = BatchRunner(coordinator, labels).run(
+                            ready_batch, pickup_type=selected_pickup,
+                            production_approved=environment == "production" and confirmed
+                                and config.production_authorized,
+                        )
+                    st.dataframe(pd.DataFrame([vars(x) for x in results]),
+                                 hide_index=True, use_container_width=True)
+                    st.warning("Verify every PIN and saved PDF before attaching labels.")
+                except CarrierConfigurationError as exc:
+                    st.error(str(exc))
     with st.expander("Recent review audit events"):
         events = store.audit_events(limit=50)
         st.dataframe(pd.DataFrame(events), use_container_width=True, hide_index=True)
+    shipped = shipment_history(journal)
+    if shipped:
+        st.markdown("#### Persistent Purolator shipment records")
+        st.dataframe(pd.DataFrame([{
+            "SAP Order": r["doc_num"], "PIN": r["shipment_pin"],
+            "Status": r["status"], "Environment": r["environment"],
+            "Created": r["created_at"],
+        } for r in shipped]), hide_index=True, use_container_width=True)
+        st.download_button(
+            "Download shipment tracking CSV",
+            shipment_history_csv(journal),
+            "puro_shipments.csv", "text/csv",
+        )
+        completed = [r for r in shipped if r["status"] == "label_ready"]
+        if completed:
+            st.download_button(
+                "Download saved label PDFs as ZIP (no carrier calls)",
+                label_zip(journal),
+                "puro_labels.zip", "application/zip",
+            )
     ready = [o for o in store.list_orders() if o["status"] == "ready"]
     if ready:
         def csv_safe(value: object) -> str:
@@ -369,5 +437,5 @@ elif view == "History & status":
         )
     else:
         st.info("No orders are marked Ready.")
-    st.info("No Purolator labels, PINs or live shipping history yet. "
-            "This release is strictly import/validation/review.")
+    if not shipped:
+        st.info("No carrier shipments have been created in this local database.")
