@@ -54,7 +54,7 @@ def test_placeholders_blocked(street):
 
 def test_bad_postal_and_province_blocked():
     data = address()
-    data.update(province="ZZ", postal_code="N0 N0 N0")
+    data.update(province="ZZ", postal_code="D0 D0 D0")
     errs = shipping_errors(data)
     assert any("province" in x for x in errs)
     assert any("postal code" in x for x in errs)
