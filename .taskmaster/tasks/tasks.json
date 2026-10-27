@@ -114,13 +114,13 @@
         "id": 9,
         "title": "Implement GetDocuments and verified PDF archive",
         "description": "Retrieve PDF after successful shipment, support documented synchronous document/URL status paths, decode/verify bytes, atomic local write and checksum",
-        "status": "pending",
+        "status": "done",
         "dependencies": [
           6,
           8
         ],
         "priority": "high",
-        "details": "Retrieve PDF after successful shipment, support documented synchronous document/URL status paths, decode/verify bytes, atomic local write and checksum; persist piece PIN links and label_ready state only when saved.",
+        "details": "Retrieve PDF after successful shipment, support documented synchronous document/URL status paths, decode/verify bytes, atomic local write and checksum; persist piece PIN links and label_ready state only when saved.\n\nCOMPLETED: synchronous GetDocuments PDF request, statuses Pending/Queued/Processing/Completed/Error, base64/valid PDF verification, pages-per-piece rule and atomic local document archive; tests passed, PR #10. Actual carrier label layouts remain Task 12.",
         "testStrategy": "Successful request creates verifiable PDF retrievable after restart; pending/error returns non-ready status; multiple pieces retain all label associations.",
         "subtasks": []
       },
