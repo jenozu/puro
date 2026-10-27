@@ -10,6 +10,7 @@ from dataclasses import dataclass
 from hashlib import sha256
 from io import BytesIO
 import re
+from zipfile import BadZipFile, ZipFile
 from typing import Any
 
 import pandas as pd
@@ -169,6 +170,14 @@ def parse_export(file_bytes: bytes, filename: str) -> ParsedImport:
             orders_df = pd.read_csv(BytesIO(file_bytes), dtype=str, keep_default_na=False)
             lines_df = None
         elif ext == "xlsx":
+            # ZIP metadata check before invoking the Excel reader. Files that
+            # decompress into huge XML payloads could exhaust workstation RAM.
+            with ZipFile(BytesIO(file_bytes)) as archive:
+                members = archive.infolist()
+                if len(members) > 1500 or sum(m.file_size for m in members) > 80 * 1024 * 1024:
+                    raise ImportProblem("Workbook expands beyond the safe import limit")
+                if any(m.file_size > 40 * 1024 * 1024 for m in members):
+                    raise ImportProblem("Workbook contains an oversized XML component")
             sheets = pd.read_excel(
                 BytesIO(file_bytes), sheet_name=None, dtype=str,
                 keep_default_na=False, engine="openpyxl",
@@ -190,15 +199,22 @@ def parse_export(file_bytes: bytes, filename: str) -> ParsedImport:
     if len(orders_df) > 5000:
         raise ImportProblem("Import is limited to 5,000 rows")
     m = _mapped(orders_df, ALIASES)
-    needed = {"doc_entry", "doc_num", "customer_name"}
+    needed = {"doc_entry", "doc_num", "card_code", "customer_name"}
     if needed - m.keys():
         raise ImportProblem(f"Missing columns: {', '.join(sorted(needed - m.keys()))}")
     if not any(f in m for f in ("street", "city", "postal_code", "country")):
         raise ImportProblem("No RDR12 Ship To columns detected; Bill To data is not accepted")
 
+    issues: list[str] = []
     line_codes: dict[str, set[str]] = {}
     if lines_df is not None and not lines_df.empty:
+        if len(lines_df) > 25000:
+            raise ImportProblem("OrderLines sheet exceeds 25,000 rows")
         lm = _mapped(lines_df, LINE_ALIASES)
+        if "doc_entry" not in lm or "ship_to_code" not in lm:
+            raise ImportProblem(
+                "OrderLines requires DocEntry and LineShipToCode (or ShipToCode)"
+            )
         if "doc_entry" in lm and "ship_to_code" in lm:
             for _, ln in lines_df.iterrows():
                 key = _val(ln, lm, "doc_entry")
@@ -207,13 +223,17 @@ def parse_export(file_bytes: bytes, filename: str) -> ParsedImport:
                     line_codes.setdefault(key, set()).add(code.casefold())
 
     orders: list[dict[str, Any]] = []
-    issues: list[str] = []
     seen: set[str] = set()
     for index, row in orders_df.iterrows():
         record = {field: _val(row, m, field) for field in ALIASES}
         entry = record["doc_entry"]
         if not entry:
             issues.append(f"Row {int(index)+2}: no DocEntry; skipped")
+            continue
+        if not record["doc_num"] or not record["card_code"] or not record["customer_name"]:
+            issues.append(
+                f"Row {int(index)+2}: missing DocNum, CardCode or CustomerName; skipped"
+            )
             continue
         if entry in seen:
             issues.append(f"Row {int(index)+2}: duplicate DocEntry {entry}; skipped")
@@ -240,4 +260,10 @@ def parse_export(file_bytes: bytes, filename: str) -> ParsedImport:
         record["source_row"] = int(index) + 2
         record["import_warnings"] = validate_address(record)
         orders.append(record)
+    unseen_line_orders = sorted(set(line_codes) - seen)
+    if unseen_line_orders:
+        issues.append(
+            f"OrderLines references {len(unseen_line_orders)} unimported DocEntry values; "
+            "review workbook filters"
+        )
     return ParsedImport(orders=orders, issues=issues, sha256=sha256(file_bytes).hexdigest())
