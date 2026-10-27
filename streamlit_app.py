@@ -339,6 +339,7 @@ elif view == "History & status":
         ready_batch = [o["doc_entry"] for o in store.list_orders()
                        if o["doc_entry"] in batch and o["status"] == "ready"]
         if not config.carrier_enabled:
+            st.warning("This batch is for review ONLY. Purolator shipment creation is disabled.")
             st.info("Carrier execution is OFF. Set up and authorize the local API environment before attempting to ship.")
         else:
             st.markdown("#### Carrier submission — explicit action only")
