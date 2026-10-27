@@ -143,7 +143,7 @@
         "id": 11,
         "title": "Automated safety and acceptance test coverage",
         "description": "Implement test matrix A01-A13 using fictional fixtures and mocked SOAP, integration tests for SQLite restart, page state, environment segregation, malformed imp",
-        "status": "pending",
+        "status": "done",
         "dependencies": [
           4,
           7,
@@ -152,7 +152,7 @@
           10
         ],
         "priority": "high",
-        "details": "Implement test matrix A01-A13 using fictional fixtures and mocked SOAP, integration tests for SQLite restart, page state, environment segregation, malformed imports and redaction; secret scan.\n\nPROGRESS NOTE — 2026-10-27 audit: 12 offline import/SQLite tests passed in GitHub Actions before the current review. The full carrier, timeout, duplicate-submission and label acceptance suite has not yet been implemented. NOT done.",
+        "details": "Implement test matrix A01-A13 using fictional fixtures and mocked SOAP, integration tests for SQLite restart, page state, environment segregation, malformed imports and redaction; secret scan.\n\nPROGRESS NOTE — 2026-10-27 audit: 12 offline import/SQLite tests passed in GitHub Actions before the current review. The full carrier, timeout, duplicate-submission and label acceptance suite has not yet been implemented. NOT done.\n\nCOMPLETED: synthetic end-to-end SAP XLSX -> RDR12 Ship To -> carrier Validate/Create -> GetDocuments PDF -> SQLite history/ZIP and restart/double-click safeguards; tracked private-file guard; 82 tests passed on Python 3.11 and 3.13, Task Master validation passed. PR #12 merged. No real carrier calls. User must complete Task 12 under IT-approved environment.",
         "testStrategy": "All required tests pass; CI never uses Production credentials or requests; manual carrier verification is separately gated.",
         "subtasks": []
       },
@@ -165,7 +165,7 @@
           11
         ],
         "priority": "high",
-        "details": "With operator approval, validate Purolator Dev credentials, real test response/label, selected service and sender; verify key/account eligibility, printer layout and scanned PDF. Do exactly one approved Production shipment, document operational signoff.",
+        "details": "With operator approval, validate Purolator Dev credentials, real test response/label, selected service and sender; verify key/account eligibility, printer layout and scanned PDF. Do exactly one approved Production shipment, document operational signoff.\n\nMANUAL HANDOFF: Follow docs/MANUAL_VALIDATION.md. Requires IT approval, local private WSDLs and credentials, true Development SOAP calls, label/printer verification, approved single Production transaction. DO NOT mark done automatically.",
         "testStrategy": "Approved live labels match Ship To and carton/PIN counts; reconciliation runbook tested; shipment charges and void rules acknowledged. No unattended live calls.",
         "subtasks": []
       },
