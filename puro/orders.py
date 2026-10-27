@@ -227,6 +227,12 @@ def parse_export(file_bytes: bytes, filename: str) -> ParsedImport:
         record["line_conflict"] = bool(
             len(codes) > 1 or (header and codes and codes != {header})
         )
+        record["source_address"] = {
+            k: record[k] for k in (
+                "ship_to_code", "ship_to_name", "street_no", "street", "building",
+                "address2", "address3", "city", "province", "postal_code", "country"
+            )
+        }
         record.update(DEFAULT_PACKAGE)
         record["source_row"] = int(index) + 2
         record["import_warnings"] = validate_address(record)
