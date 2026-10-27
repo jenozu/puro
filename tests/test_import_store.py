@@ -83,7 +83,7 @@ def test_no_bill_to_fallback_when_ship_to_missing():
 def test_workbook_with_only_bill_to_columns_is_rejected():
     row = valid_row()
     row = {k: v for k, v in row.items() if not k.endswith("S")}
-    with pytest.raises(ImportProblem, match="No RDR12 Ship To columns"):
+    with pytest.raises(ImportProblem, match="No approved Ship To columns"):
         parse_export(workbook([row]), "orders.xlsx")
 
 
