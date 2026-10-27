@@ -177,6 +177,8 @@ class Store:
                 "pieces", "service", "payer", "receiver_account"
             }
             current.update({k: v for k, v in values.items() if k in allowed})
+            if current.get("full_ship_to_address"):
+                current["address_review_pending"] = True
             db.execute(
                 """UPDATE orders SET data_json=?, status='needs_review',
                    updated_at=?, reviewed_at=NULL WHERE doc_entry=?""",
@@ -185,6 +187,33 @@ class Store:
             db.execute(
                 "INSERT INTO audit_events(doc_entry, action, occurred_at) VALUES(?,?,?)",
                 (str(doc_entry), "draft_updated_review_revoked", _now()),
+            )
+
+
+    def confirm_address_review(self, doc_entry: str) -> None:
+        """An explicit operator attestation of the mapped address components."""
+        with self._connect() as db:
+            row = db.execute(
+                "SELECT data_json,status FROM orders WHERE doc_entry=?", (str(doc_entry),)
+            ).fetchone()
+            if not row:
+                raise ValueError("Order not found")
+            if row["status"] in PROTECTED:
+                raise ValueError("Shipment record locks this address")
+            order = json.loads(row["data_json"])
+            if not order.get("full_ship_to_address"):
+                raise ValueError("No original FullShipToAddress to verify")
+            errors = review_errors(order)
+            if errors:
+                raise ValueError("; ".join(errors))
+            order["address_review_pending"] = False
+            db.execute(
+                "UPDATE orders SET data_json=?,status='needs_review',updated_at=? WHERE doc_entry=?",
+                (json.dumps(order, ensure_ascii=False), _now(), str(doc_entry)),
+            )
+            db.execute(
+                "INSERT INTO audit_events(doc_entry,action,occurred_at) VALUES(?,?,?)",
+                (str(doc_entry), "full_address_manually_verified", _now()),
             )
 
     def confirm_ready(self, doc_entry: str) -> None:
@@ -199,6 +228,8 @@ class Store:
                 raise ValueError("Cannot re-approve a shipment in progress or complete")
             order = json.loads(row["data_json"])
             errors = review_errors(order)
+            if order.get("address_review_pending"):
+                errors.append("Confirm the parsed FullShipToAddress fields explicitly")
             if errors:
                 raise ValueError("; ".join(errors))
             db.execute(
