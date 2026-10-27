@@ -32,6 +32,7 @@ def test_raw_copy_table_import_preserves_complete_address():
     assert parsed.orders[0]["address_review_pending"]
     assert parsed.orders[1]["cash_sale"]
     assert parsed.orders[1]["ship_to_name"] == ""
+    assert parsed.orders[1]["suggested_cash_recipient"] == "Acme Sample Repair"
     assert parsed.orders[1]["full_ship_to_address"].startswith("Acme Sample Repair")
 
 
