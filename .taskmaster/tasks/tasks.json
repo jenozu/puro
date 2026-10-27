@@ -16,12 +16,12 @@
         "id": 2,
         "title": "Implement SQLite schema, migrations and durable shipment journal",
         "description": "Create imports, orders, shipments, shipment_pieces, attempts, documents and audit_events tables",
-        "status": "pending",
+        "status": "done",
         "dependencies": [
           1
         ],
         "priority": "high",
-        "details": "Create imports, orders, shipments, shipment_pieces, attempts, documents and audit_events tables; uniqueness constraints and atomic transactions; restart/backup migration tests.\n\nPROGRESS NOTE — 2026-10-27 audit: SQLite store includes imports/orders/audit records plus placeholder shipments/attempts/pieces/documents tables. Reimport preservation and restart tests exist. Still missing migrations, atomic non-idempotent carrier request journal, uniqueness/locking guards, and document persistence implementation. NOT done.",
+        "details": "Create imports, orders, shipments, shipment_pieces, attempts, documents and audit_events tables; uniqueness constraints and atomic transactions; restart/backup migration tests.\n\nPROGRESS NOTE — 2026-10-27 audit: SQLite store includes imports/orders/audit records plus placeholder shipments/attempts/pieces/documents tables. Reimport preservation and restart tests exist. Still missing migrations, atomic non-idempotent carrier request journal, uniqueness/locking guards, and document persistence implementation. NOT done.\n\nCOMPLETED: journal migration v2, unique transaction claim, durable attempt before network call, reconciliation state on ambiguous responses, per-piece PINs, atomic PDF archive and SQLite restart/concurrency tests; offline GitHub Actions green, PR #3.",
         "testStrategy": "Reload a saved draft/successful shipment with all identifiers after process restart; concurrent conflicting writes fail safely.",
         "subtasks": []
       },
