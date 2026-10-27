@@ -98,7 +98,7 @@
         "id": 8,
         "title": "Implement durable safe CreateShipment and reconciliation",
         "description": "Journal attempt before any CreateShipment",
-        "status": "pending",
+        "status": "done",
         "dependencies": [
           2,
           5,
@@ -106,7 +106,7 @@
           7
         ],
         "priority": "high",
-        "details": "Journal attempt before any CreateShipment; transaction lock/uniqueness, per-order batch grouping, persisted shipment/piece PINs, separate rejected vs uncertain result handling, manual reconciliation workflow.",
+        "details": "Journal attempt before any CreateShipment; transaction lock/uniqueness, per-order batch grouping, persisted shipment/piece PINs, separate rejected vs uncertain result handling, manual reconciliation workflow.\n\nCOMPLETED: carrier ValidateShipment preflight, SQLite attempt before CreateShipment, safe unknown timeout handling, tracking PINs and explicit rejection; no duplicate attempts by order; mocked tests CI green, PR #9. Live acceptance remains Task 12.",
         "testStrategy": "Double click/reload/same order import triggers at most one authorized create; timeout after send becomes needs_reconciliation without automatic retry.",
         "subtasks": []
       },
