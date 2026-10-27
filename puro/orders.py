@@ -239,7 +239,7 @@ def parse_export(file_bytes: bytes, filename: str) -> ParsedImport:
                 record["ship_to_name"] = name
             else:
                 # This is only a suggestion. Operator approval is always required.
-                match = re.search(r"\\b\\d{1,6}\\s+[A-Za-z]", record["full_ship_to_address"])
+                match = re.search(r"\b\d{1,6}\s+[A-Za-z]", record["full_ship_to_address"])
                 record["suggested_cash_recipient"] = (
                     record["full_ship_to_address"][:match.start()].strip(" ,;-")
                     if match else ""
