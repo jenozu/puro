@@ -1,6 +1,6 @@
 """Adversarial and variant SAP spreadsheet tests."""
 from io import BytesIO
-from zipfile import ZipFile
+from zipfile import ZIP_DEFLATED, ZipFile
 
 import pandas as pd
 import pytest
@@ -72,7 +72,7 @@ def test_mismatched_orderlines_references_warn():
 
 def test_xlsx_archive_bomb_guard():
     file = BytesIO()
-    with ZipFile(file, "w") as zf:
+    with ZipFile(file, "w", compression=ZIP_DEFLATED) as zf:
         zf.writestr("xl/workbook.xml", b"x" * (81 * 1024 * 1024))
     with pytest.raises(ImportProblem, match="safe import limit"):
         parse_export(file.getvalue(), "sap.xlsx")
