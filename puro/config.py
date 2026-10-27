@@ -22,6 +22,8 @@ class AppConfig:
     data_dir: Path = Path("local_data")
     labels_dir: Path = Path("local_data/labels")
     wsdl_dir: Path = Path("private_wsdl")
+    carrier_enabled: bool = False
+    production_authorized: bool = False
     sender_name: str = ""
     sender_street_no: str = ""
     sender_street: str = ""
@@ -52,6 +54,10 @@ class AppConfig:
             data_dir=directory,
             labels_dir=labels,
             wsdl_dir=Path(os.getenv("PUROLATOR_WSDL_DIR", "private_wsdl")).expanduser(),
+            carrier_enabled=os.getenv("PURO_ENABLE_CARRIER", "false").lower()
+                in {"true", "1", "yes"},
+            production_authorized=os.getenv("PURO_PRODUCTION_APPROVED", "false").lower()
+                in {"true", "1", "yes"},
             sender_name=os.getenv("DEFAULT_SENDER_NAME", "").strip(),
             sender_street_no=os.getenv("DEFAULT_SENDER_STREET_NO", "").strip(),
             sender_street=os.getenv("DEFAULT_SENDER_STREET", "").strip(),
