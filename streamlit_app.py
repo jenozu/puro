@@ -195,7 +195,7 @@ elif view == "Review a shipment":
 
         with st.form(f"review_{entry}"):
             st.markdown("#### Recipient / Ship To")
-            name = st.text_input("Ship To recipient name", value=order.get("ship_to_name", ""),
+            name = st.text_input("Ship To recipient name", value=order.get("ship_to_name") or order.get("suggested_cash_recipient", ""),
                                  key=f"{entry}_name")
             c1, c2 = st.columns([1, 3])
             with c1:
