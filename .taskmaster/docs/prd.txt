@@ -1,0 +1,59 @@
+# Puro Shipping Workstation — Task Master PRD
+Date: 2026-10-27
+Stage: pre-implementation. This is the machine-parseable requirements document for Task Master.
+Canonical human-oriented PRD: docs/PRD.md. MVP: docs/MVP.md. Roadmap: docs/BUILD_PLAN.md.
+
+## Context and problem
+An internal shipping workstation formerly used Python/Streamlit and direct SQL Server access to SAP Business One, which is no longer available. Operator has authorized SAP exports and active Purolator E-Ship Development and Production SOAP keys but no tested replacement app. Build a local-first Windows-friendly Python shipping tool that imports XLSX/CSV sales order exports and creates verified Purolator shipment labels without SAP connectivity. All API credentials remain local; repo jenozu/puro is PUBLIC.
+
+## Product objective
+An operator uploads SAP sales order workbook, selects orders, verifies order-specific Ship To information, confirms physical parcel weights/dimensions and payer/service, creates each shipment once with Purolator SOAP, persists tracking PINs and label PDFs, and can recover after restart without unsafe retries or duplicates.
+
+## Critical data requirements
+- Orders sheet: DocEntry, DocNum, CardCode, CustomerName, ShipToStreetNo, ShipToStreet, ShipToBuilding, ShipToAddress2, ShipToAddress3, ShipToCity, ShipToProvince, ShipToPostalCode, ShipToCountry, preferred ShipToName and ContactPhone, optional ShipToCode/DocStatus/CustomerPO.
+- SAP source: ORDR joined RDR12 ON DocEntry; all destination address fields MUST be order-specific RDR12 shipping suffix S. Never use StreetB/CityB/ZipCodeB or other Bill To fields as destination. CRD1 selected shipping master is reference only, with explicit approval for corrections.
+- Optional OrderLines sheet keyed by DocEntry; detect orders with multiple RDR1.ShipToCode values and require splitting/review. Never assume one order means one destination.
+- Accept XLSX and CSV; map SAP aliases, keep postal codes as text; reject missing/ambiguous headers, invalid country/address/phone, cancelled/closed orders when status known. Store file/import provenance; repeat imports preserve shipped state.
+
+## Interface
+Streamlit 5 areas: Import, Orders, Review & Ship, History & Labels, Settings & Diagnostics. Search DocNum/CustomerName/CardCode, batch select, editable but audited receiver fields, display normalized final Ship To payload, confirm origin/recipient, package count, measured weights/dimensions, Purolator service and Sender/Receiver payer. Explicit Production environment indicator and separate confirmation before a live submission. Show status per order; don't lose partially completed batch.
+
+## Carrier integration (SOAP WSDL-driven)
+Use Python zeep/requests, Purolator SOAP WSDLs supplied separately under permitted local storage; separate Development and Production credentials/endpoints. Validate versions: Shipping RequestContext 2.2, Get Documents 1.4, Estimates 2.2, Service Availability 2.0. Guides supplied: Shipment Service 2.2.2, Get Documents 1.4.0, Estimates 2.2.2, Service Availability 2.0.4. Keep proprietary docs, WSDLs and credentials out of public repo unless redistribution explicitly permitted.
+- Implement typed operations ValidateShipment, CreateShipment, GetDocuments. Use actual WSDL field names (sender/receiver, packages, service, billing, registered/billing account) rather than guessing.
+- Model multi-piece shipments; persist shipment PIN AND all piece PINs, not only first PIN.
+- Correctly handle documented GetDocuments synchronous PDF response or allowed URL/document statuses. A created shipment is not necessarily label-ready. Verify actual PDF bytes and save atomically.
+- MVP payer: Sender/Receiver with account validation; ThirdParty and CreditCard not MVP (do not offer unsupported credit-card service).
+- Later: GetFullEstimate, GetServicesOptions, VoidShipment, manifests. International/customs out of MVP.
+
+## Shipment safety and persistence
+SQLite local database with migrations, tables for imports/orders/shipments/pieces/attempts/documents/audit events. Record unique attempt BEFORE non-idempotent CreateShipment. Double click, Streamlit rerun, reimport, restart and retry must not create a duplicate. If carrier request may have reached Purolator but response was lost, status needs_reconciliation and NEVER automatic retry. Operator reconciles by carrier reference/PIN/support; controlled manual path. States imported/needs_review/ready/creating/needs_reconciliation/created/label_pending/label_ready/failed/voided.
+- Save all PINs, verified PDFs/paths/hashes and timestamps; history CSV and downloaded labels after restart.
+- Redact secrets and customer details from logs, tests and all public Git files.
+
+## Architecture and technology
+Python 3.11+, Streamlit, pandas/openpyxl, Pydantic, Zeep + requests, sqlite3/SQLAlchemy, pytest, optional PyMuPDF. UI independent of import/domain/carrier/storage layers. No SQL Server/ODBC. Settings in local .env, ignored by Git, Development default. Unit tests use mocked SOAP only, no live production calls in CI.
+
+## Acceptance test scenarios (MUST implement)
+1. Ship To differs from Bill To: SOAP receiver uses RDR12 Ship To only.
+2. Missing Ship To: block submission; no Bill To fallback.
+3. Multiple line-level ShipToCode: block automatic single-recipient shipment.
+4. Duplicate import or UI double click: no duplicated shipment.
+5. Timeout after submission: needs_reconciliation, no automatic retries.
+6. Reopen app: saved status, PINs and PDF remain.
+7. Multi-piece response: each piece PIN and label stored.
+8. Missing receiver billing account: fail validation before CreateShipment.
+9. Pending/failed GetDocuments: never mark label_ready.
+10. Successful GetDocuments: valid saved PDF bytes, can re-download.
+11. Production vs Development endpoints segregated; manual confirmation gates.
+12. Logs/test fixtures/repo contain no actual keys or customer private data.
+13. Authorized Development test and one deliberately approved Production test (manual release gate).
+
+## Implementation task dependency order
+T1 foundation/configuration/CI; T2 persistence journal; T3 import; T4 Ship To validation; T5 review UI; T6 SOAP adapter; T7 shipment validation/payer/package mapping; T8 safe CreateShipment + duplicate guard; T9 GetDocuments/PDF store; T10 batch and history; T11 automated tests; T12 Development/Production signoff; T13 enhancements. Details, acceptance and dependencies seeded in .taskmaster/tasks/tasks.json. Task Master should track progress, one task at a time with tests.
+
+## Non-goals
+Direct SAP access, SAP write-back, international customs forms, pickup scheduling, tracking polling, online multiuser hosting, auto-print to thermal printers, billing/payment via credit card, uncontrolled production auto-testing.
+
+## Delivery and release rule
+No UI task is "complete" without tests for its safety properties. No software described as production-ready until real authorized carrier testing, PDF validation, Ship To mismatch signoff and safe-retry demonstration have passed.
