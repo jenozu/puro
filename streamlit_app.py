@@ -12,6 +12,7 @@ import streamlit as st
 
 from puro.config import AppConfig, ConfigurationError
 from puro.auditlog import configure_logging, log_event
+from puro.address import recipient_snapshot, AddressProblem
 from puro.orders import ImportProblem, parse_export, review_errors
 from puro.store import Store
 
@@ -136,7 +137,21 @@ elif view == "Orders":
         ]),
         hide_index=True, use_container_width=True,
     )
-    st.caption("Orders marked Ready have been reviewed; none have been sent to Purolator.")
+    eligible = [o for o in orders if o["status"] in {"needs_review", "ready"}]
+    staged = st.session_state.get("review_batch", [])
+    selected_entries = st.multiselect(
+        "Select orders for a review batch (no carrier calls)",
+        options=[o["doc_entry"] for o in eligible],
+        default=[o["doc_entry"] for o in eligible if o["doc_entry"] in staged],
+        format_func=lambda v: next(
+            (f"#{o['doc_num']} — {o['customer_name']}" for o in eligible
+             if o["doc_entry"] == v), v
+        ),
+    )
+    if st.button("Stage selected orders for review"):
+        st.session_state["review_batch"] = selected_entries
+        st.success(f"{len(selected_entries)} order(s) staged for review.")
+    st.caption("Orders marked Ready have been locally reviewed; none have been sent to Purolator.")
 
 elif view == "Review a shipment":
     st.subheader("Verify destination and package details")
@@ -146,7 +161,15 @@ elif view == "Review a shipment":
     else:
         choices = {f"#{o['doc_num']} — {o['customer_name']} (DocEntry {o['doc_entry']})":
                    o["doc_entry"] for o in rows}
-        selected = st.selectbox("Select sales order", list(choices))
+        staged = set(st.session_state.get("review_batch", []))
+        if staged:
+            choices = {label: doc_entry for label, doc_entry in choices.items()
+                       if doc_entry in staged}
+            st.caption(f"Reviewing {len(choices)} staged orders. Clear the batch in Orders to review all.")
+        selected = st.selectbox("Select sales order", list(choices)) if choices else None
+        if not choices:
+            st.warning("No staged orders are available for review. Re-select them under Orders.")
+            st.stop()
         entry = choices[selected]
         saved = store.get_order(entry)
         assert saved is not None
@@ -250,6 +273,10 @@ elif view == "Review a shipment":
                 st.error(issue)
         else:
             st.success("Local preflight passed. Review destination and shipping details.")
+            recipient = recipient_snapshot(latest["data"])
+            st.write("**Final receiver snapshot — shipping fields only:**")
+            st.json(recipient)
+            st.write("**Requested package / service:**")
             st.json({
                 "order": latest["doc_num"],
                 "recipient": latest["data"]["ship_to_name"],
@@ -288,6 +315,25 @@ elif view == "History & status":
     a.metric("Total imported", sum(summary.values()))
     b.metric("Ready for future integration", summary.get("ready", 0))
     c.metric("Needs review", summary.get("needs_review", 0))
+    batch = set(st.session_state.get("review_batch", []))
+    if batch:
+        st.markdown("#### Staged review batch")
+        preview = []
+        for o in store.list_orders():
+            if o["doc_entry"] not in batch:
+                continue
+            problems = review_errors(o["data"])
+            preview.append({
+                "Order": o["doc_num"],
+                "Ship To": f"{o['data'].get('street', '')}, {o['data'].get('city', '')}",
+                "Review status": o["status"],
+                "Local errors": "; ".join(problems) or "None",
+            })
+        st.dataframe(pd.DataFrame(preview), use_container_width=True, hide_index=True)
+        st.warning("This batch is for review ONLY. There is no 'Ship' action in this build.")
+    with st.expander("Recent review audit events"):
+        events = store.audit_events(limit=50)
+        st.dataframe(pd.DataFrame(events), use_container_width=True, hide_index=True)
     ready = [o for o in store.list_orders() if o["status"] == "ready"]
     if ready:
         def csv_safe(value: object) -> str:
