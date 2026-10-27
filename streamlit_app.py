@@ -5,7 +5,7 @@ NO Purolator shipment creation is available in this increment.
 from __future__ import annotations
 
 import csv
-from io import StringIO
+from io import BytesIO, StringIO
 import os
 from pathlib import Path
 
