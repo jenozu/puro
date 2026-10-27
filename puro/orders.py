@@ -237,6 +237,13 @@ def parse_export(file_bytes: bytes, filename: str) -> ParsedImport:
             record["cash_sale"] = bool(re.fullmatch(r"cash\s+sale", name, re.I))
             if not record["cash_sale"]:
                 record["ship_to_name"] = name
+            else:
+                # This is only a suggestion. Operator approval is always required.
+                match = re.search(r"\\b\\d{1,6}\\s+[A-Za-z]", record["full_ship_to_address"])
+                record["suggested_cash_recipient"] = (
+                    record["full_ship_to_address"][:match.start()].strip(" ,;-")
+                    if match else ""
+                )
             # Even regular customer names do not mean the street/city can be guessed.
             record["address_review_pending"] = True
         else:
