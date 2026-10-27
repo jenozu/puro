@@ -71,17 +71,14 @@ if view == "Import SAP export":
     st.subheader("Import an Excel or CSV export")
     st.write(
         "Upload an XLSX workbook with an **Orders** worksheet, or a CSV with matching "
-        "headers. Order addresses are read from SAP **Ship To (RDR12)** fields. "
+        "headers. The new export uses only **ORDR.Address2 / FullShipToAddress** for the original destination. "
         "Billing addresses are never used as a substitute."
     )
     template = BytesIO()
     with pd.ExcelWriter(template, engine="openpyxl") as writer:
         pd.DataFrame(columns=[
             "DocEntry", "DocNum", "CardCode", "CustomerName", "CustomerPO",
-            "ShipToCode", "ShipToName", "ShipToStreetNo", "ShipToStreet",
-            "ShipToBuilding", "ShipToAddress2", "ShipToAddress3", "ShipToCity",
-            "ShipToProvince", "ShipToPostalCode", "ShipToCountry",
-            "ContactPhone", "DocStatus", "CANCELED",
+            "FullShipToAddress",
         ]).to_excel(writer, sheet_name="Orders", index=False)
         pd.DataFrame(columns=[
             "DocEntry", "LineNum", "ItemCode", "LineShipToCode"
@@ -187,8 +184,14 @@ elif view == "Review a shipment":
         )
         source = order.get("source_address")
         if source:
-            with st.expander("Original imported Ship To fields"):
-                st.json(source)
+            st.markdown("#### Original SAP Ship To (read-only)")
+            st.json(source)
+            if order.get("full_ship_to_address"):
+                st.warning(
+                    "Fill the fields below using only this original address. "
+                    "For Cash Sale, use the recipient name before the street number. "
+                    "Check all values manually: no inferred address is approved automatically."
+                )
 
         with st.form(f"review_{entry}"):
             st.markdown("#### Recipient / Ship To")
@@ -302,9 +305,22 @@ elif view == "Review a shipment":
                 "width_in": latest["data"]["width_in"],
                 "height_in": latest["data"]["height_in"],
             })
+        pending = latest["data"].get("address_review_pending", False)
+        if pending and not issues:
+            verified = st.checkbox(
+                "I verified the recipient name and all shipping address fields "
+                "against the original SAP FullShipToAddress displayed above."
+            )
+            if st.button("Confirm original SAP address", disabled=not verified):
+                try:
+                    store.confirm_address_review(entry)
+                    st.success("Address verified. Mark Ready separately.")
+                    st.rerun()
+                except ValueError as exc:
+                    st.error(str(exc))
         if st.button(
             "Confirm review — mark Ready (does NOT ship)",
-            disabled=bool(issues) or latest["status"] not in {"ready", "needs_review"},
+            disabled=bool(issues) or pending or latest["status"] not in {"ready", "needs_review"},
             type="primary",
         ):
             try:
