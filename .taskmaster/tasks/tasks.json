@@ -128,14 +128,14 @@
         "id": 10,
         "title": "Implement batch execution, shipping history, results exports and downloads",
         "description": "Process orders independently, persist each result immediately, show progress/status, CSV of PINs, individual PDFs and batch ZIP from local archive",
-        "status": "pending",
+        "status": "done",
         "dependencies": [
           5,
           8,
           9
         ],
         "priority": "high",
-        "details": "Process orders independently, persist each result immediately, show progress/status, CSV of PINs, individual PDFs and batch ZIP from local archive; preserve successes on partial failure.",
+        "details": "Process orders independently, persist each result immediately, show progress/status, CSV of PINs, individual PDFs and batch ZIP from local archive; preserve successes on partial failure.\n\nCOMPLETED: explicit gated batch action, safe partial results, shipment history CSV, checksum-verified local label PDF ZIP, default off in .env and manual Production confirmation; offline CI green, PR #11.",
         "testStrategy": "Partially failed batch is resumable without resending successes; downloads and history survive restart.",
         "subtasks": []
       },
