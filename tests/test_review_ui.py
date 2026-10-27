@@ -39,4 +39,4 @@ def test_select_review_batch_without_shipping(monkeypatch, tmp_path):
 
     app.sidebar.radio[0].set_value("History & status").run()
     assert not app.exception
-    assert any("review ONLY" in item.message for item in app.warning)
+    assert any("review ONLY" in item.value for item in app.warning)
