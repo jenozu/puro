@@ -60,6 +60,23 @@ if view == "Import SAP export":
         "headers. Order addresses are read from SAP **Ship To (RDR12)** fields. "
         "Billing addresses are never used as a substitute."
     )
+    template = BytesIO()
+    with pd.ExcelWriter(template, engine="openpyxl") as writer:
+        pd.DataFrame(columns=[
+            "DocEntry", "DocNum", "CardCode", "CustomerName", "CustomerPO",
+            "ShipToCode", "ShipToName", "ShipToStreetNo", "ShipToStreet",
+            "ShipToBuilding", "ShipToAddress2", "ShipToAddress3", "ShipToCity",
+            "ShipToProvince", "ShipToPostalCode", "ShipToCountry",
+            "ContactPhone", "DocStatus", "CANCELED",
+        ]).to_excel(writer, sheet_name="Orders", index=False)
+        pd.DataFrame(columns=[
+            "DocEntry", "LineNum", "ItemCode", "LineShipToCode"
+        ]).to_excel(writer, sheet_name="OrderLines", index=False)
+    st.download_button(
+        "Download empty SAP export template",
+        template.getvalue(), file_name="puro_sap_export_template.xlsx",
+        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    )
     uploaded = st.file_uploader("SAP orders", type=["xlsx", "csv"])
     if uploaded:
         try:
@@ -266,6 +283,10 @@ elif view == "History & status":
     c.metric("Needs review", summary.get("needs_review", 0))
     ready = [o for o in store.list_orders() if o["status"] == "ready"]
     if ready:
+        def csv_safe(value: object) -> str:
+            text = str(value if value is not None else "")
+            return "'" + text if text.lstrip().startswith(("=", "+", "-", "@")) else text
+
         buffer = StringIO()
         writer = csv.writer(buffer)
         writer.writerow([
@@ -278,7 +299,7 @@ elif view == "History & status":
         ])
         for item in ready:
             d = item["data"]
-            writer.writerow([
+            writer.writerow([csv_safe(v) for v in [
                 item["doc_entry"], item["doc_num"], d.get("card_code", ""),
                 item["customer_name"], *(
                     d.get(x, "") for x in (
@@ -287,7 +308,7 @@ elif view == "History & status":
                         "weight_lb", "length_in", "width_in", "height_in", "service", "payer"
                     )
                 )
-            ])
+            ]])
         st.download_button(
             "Download reviewed orders CSV (not carrier labels)",
             buffer.getvalue().encode("utf-8-sig"),
