@@ -1,0 +1,56 @@
+# Local credentials and environment (repository is PUBLIC)
+.env
+.env.*
+!.env.example
+.streamlit/secrets.toml
+*.pem
+*.key
+credentials*
+secrets*
+
+# Personal or confidential shipping data / documentation
+local_data/
+data/
+labels/
+backups/
+exports/
+uploads/
+private/
+*.xlsx
+*.xls
+*.xlsm
+*.csv
+*.zip
+*.wsdl
+*.xsd
+*.pdf
+*.zpl
+*.epl
+*.dpl
+*.db
+*.sqlite
+*.sqlite3
+
+# OS and editor data
+.DS_Store
+Thumbs.db
+.vscode/settings.json
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.envrc
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+dist/
+build/
+
+# Node / Task Master runtime
+node_modules/
+.taskmaster/reports/
+.taskmaster/tmp/
