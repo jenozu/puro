@@ -1,0 +1,234 @@
+"""SAP Business One XLSX/CSV import and safety checks.
+
+Shipping addresses come ONLY from RDR12's *S (Ship To) fields or
+explicitly mapped ShipTo* columns. Generic and *B billing columns are
+never eligible as a destination. No fuzzy address-field matching.
+"""
+from __future__ import annotations
+
+from dataclasses import dataclass
+from hashlib import sha256
+from io import BytesIO
+import re
+from typing import Any
+
+import pandas as pd
+
+
+class ImportProblem(ValueError):
+    """Import is unusable; user should correct the workbook/header."""
+
+
+def _norm(s: Any) -> str:
+    return re.sub(r"[^a-z0-9]", "", str(s).casefold())
+
+
+ALIASES: dict[str, tuple[str, ...]] = {
+    "doc_entry": ("DocEntry",),
+    "doc_num": ("DocNum",),
+    "card_code": ("CardCode",),
+    "customer_name": ("CustomerName", "CardName"),
+    "customer_po": ("CustomerPO", "NumAtCard"),
+    "ship_to_code": ("ShipToCode",),
+    "ship_to_name": ("ShipToName", "AddressNameS"),
+    "street_no": ("ShipToStreetNo", "StreetNoS"),
+    "street": ("ShipToStreet", "StreetS"),
+    "building": ("ShipToBuilding", "BuildingS"),
+    "address2": ("ShipToAddress2", "Address2S"),
+    "address3": ("ShipToAddress3", "Address3S"),
+    "city": ("ShipToCity", "CityS"),
+    "province": ("ShipToProvince", "StateS"),
+    "postal_code": ("ShipToPostalCode", "ZipCodeS"),
+    "country": ("ShipToCountry", "CountryS"),
+    "phone": ("ContactPhone", "CustomerPhone", "Phone1"),
+    "doc_status": ("DocStatus",),
+    "cancelled": ("CANCELED", "Canceled"),
+}
+LINE_ALIASES = {"doc_entry": ("DocEntry",), "ship_to_code": ("LineShipToCode", "ShipToCode")}
+
+DEFAULT_PACKAGE = {
+    "weight_lb": 0.0,
+    "length_in": 0.0,
+    "width_in": 0.0,
+    "height_in": 0.0,
+    "pieces": 1,
+    "service": "PurolatorGround",
+    "payer": "Sender",
+    "receiver_account": "",
+}
+
+
+def _mapped(df: pd.DataFrame, aliases: dict[str, tuple[str, ...]]) -> dict[str, str]:
+    labels: dict[str, list[str]] = {}
+    for c in df.columns:
+        labels.setdefault(_norm(c), []).append(str(c))
+    result: dict[str, str] = {}
+    for field, options in aliases.items():
+        matches = []
+        for option in options:
+            matches.extend(labels.get(_norm(option), []))
+        if len(matches) > 1:
+            raise ImportProblem(f"Ambiguous columns for {field}: {', '.join(matches)}")
+        if matches:
+            result[field] = matches[0]
+    return result
+
+
+def _val(row: pd.Series, mapping: dict[str, str], field: str) -> str:
+    if field not in mapping:
+        return ""
+    value = row[mapping[field]]
+    if pd.isna(value):
+        return ""
+    s = str(value).strip()
+    # Excel numeric document identifiers commonly arrive as 123.0.
+    if field in {"doc_entry", "doc_num"} and re.fullmatch(r"\d+\.0", s):
+        return s[:-2]
+    return s
+
+
+def validate_address(order: dict[str, Any]) -> list[str]:
+    errors: list[str] = []
+    for field, label in (
+        ("street", "Ship To street"),
+        ("city", "Ship To city"),
+        ("province", "Ship To province"),
+        ("postal_code", "Ship To postal code"),
+        ("country", "Ship To country"),
+    ):
+        if not str(order.get(field, "")).strip():
+            errors.append(f"Missing {label}")
+    country = str(order.get("country", "")).strip().upper()
+    if country and country not in {"CA", "CAN", "CANADA"}:
+        errors.append("MVP supports Canadian destinations only")
+    province = str(order.get("province", "")).strip().upper()
+    if country in {"CA", "CAN", "CANADA"} and province and province not in {
+        "AB", "BC", "MB", "NB", "NL", "NS", "NT", "NU", "ON", "PE", "QC", "SK", "YT"
+    }:
+        errors.append("Ship To province must be a Canadian two-letter code")
+    pc = re.sub(r"\s+", "", str(order.get("postal_code", "")).upper())
+    if country in {"CA", "CAN", "CANADA"} and pc and not re.fullmatch(
+        r"[ABCEGHJ-NPRSTVXY]\d[ABCEGHJ-NPRSTV-Z]\d[ABCEGHJ-NPRSTV-Z]\d", pc
+    ):
+        errors.append("Invalid Canadian Ship To postal code")
+    if not str(order.get("ship_to_name", "")).strip():
+        errors.append("Missing Ship To recipient name")
+    return errors
+
+
+def validate_package(order: dict[str, Any]) -> list[str]:
+    errors: list[str] = []
+    for field in ("weight_lb", "length_in", "width_in", "height_in"):
+        try:
+            if float(order.get(field, 0)) <= 0:
+                errors.append(f"Enter a positive {field.replace('_', ' ')}")
+        except (ValueError, TypeError):
+            errors.append(f"Invalid {field}")
+    try:
+        if int(order.get("pieces", 0)) != 1:
+            errors.append("First increment supports one parcel per reviewed order")
+    except (ValueError, TypeError):
+        errors.append("Invalid parcel count")
+    if order.get("payer") == "Receiver" and not str(
+        order.get("receiver_account", "")
+    ).strip():
+        errors.append("Receiver billing requires a Purolator account number")
+    return errors
+
+
+def review_errors(order: dict[str, Any]) -> list[str]:
+    errors = validate_address(order) + validate_package(order)
+    if order.get("line_conflict"):
+        errors.append("Order lines use conflicting/different Ship To codes; split and verify in SAP")
+    return errors
+
+
+@dataclass
+class ParsedImport:
+    orders: list[dict[str, Any]]
+    issues: list[str]
+    sha256: str
+
+
+def parse_export(file_bytes: bytes, filename: str) -> ParsedImport:
+    """Parse an untrusted workbook into review-only normalized order dicts.
+
+    Does not execute macros/formulas. Row-level invalid destinations remain
+    available for user correction. It makes no requests to Purolator.
+    """
+    if not file_bytes:
+        raise ImportProblem("The uploaded file is empty")
+    if len(file_bytes) > 20 * 1024 * 1024:
+        raise ImportProblem("File exceeds 20 MB import limit")
+    ext = filename.rsplit(".", 1)[-1].lower()
+    try:
+        if ext == "csv":
+            orders_df = pd.read_csv(BytesIO(file_bytes), dtype=str, keep_default_na=False)
+            lines_df = None
+        elif ext == "xlsx":
+            sheets = pd.read_excel(
+                BytesIO(file_bytes), sheet_name=None, dtype=str,
+                keep_default_na=False, engine="openpyxl",
+            )
+            names = {k.casefold(): k for k in sheets}
+            if "orders" not in names:
+                raise ImportProblem("Workbook must contain an 'Orders' worksheet")
+            orders_df = sheets[names["orders"]]
+            lines_df = sheets.get(names["orderlines"]) if "orderlines" in names else None
+        else:
+            raise ImportProblem("Upload an .xlsx or .csv file (not .xls/.xlsm)")
+    except ImportProblem:
+        raise
+    except Exception as exc:
+        raise ImportProblem(f"Could not read file: {type(exc).__name__}") from exc
+
+    if orders_df.empty:
+        raise ImportProblem("Orders sheet contains no rows")
+    if len(orders_df) > 5000:
+        raise ImportProblem("Import is limited to 5,000 rows")
+    m = _mapped(orders_df, ALIASES)
+    needed = {"doc_entry", "doc_num", "customer_name"}
+    if needed - m.keys():
+        raise ImportProblem(f"Missing columns: {', '.join(sorted(needed - m.keys()))}")
+    if not any(f in m for f in ("street", "city", "postal_code", "country")):
+        raise ImportProblem("No RDR12 Ship To columns detected; Bill To data is not accepted")
+
+    line_codes: dict[str, set[str]] = {}
+    if lines_df is not None and not lines_df.empty:
+        lm = _mapped(lines_df, LINE_ALIASES)
+        if "doc_entry" in lm and "ship_to_code" in lm:
+            for _, ln in lines_df.iterrows():
+                key = _val(ln, lm, "doc_entry")
+                code = _val(ln, lm, "ship_to_code")
+                if key and code:
+                    line_codes.setdefault(key, set()).add(code.casefold())
+
+    orders: list[dict[str, Any]] = []
+    issues: list[str] = []
+    seen: set[str] = set()
+    for index, row in orders_df.iterrows():
+        record = {field: _val(row, m, field) for field in ALIASES}
+        entry = record["doc_entry"]
+        if not entry:
+            issues.append(f"Row {int(index)+2}: no DocEntry; skipped")
+            continue
+        if entry in seen:
+            issues.append(f"Row {int(index)+2}: duplicate DocEntry {entry}; skipped")
+            continue
+        seen.add(entry)
+        status = record["doc_status"].upper()
+        cancelled = record["cancelled"].upper()
+        if (status and status not in {"O", "OPEN"}) or cancelled in {"Y", "YES"}:
+            issues.append(f"Row {int(index)+2}: closed/cancelled order; skipped")
+            continue
+        record["ship_to_name"] = record["ship_to_name"] or record["customer_name"]
+        codes = line_codes.get(entry, set())
+        header = record["ship_to_code"].casefold()
+        record["line_conflict"] = bool(
+            len(codes) > 1 or (header and codes and codes != {header})
+        )
+        record.update(DEFAULT_PACKAGE)
+        record["source_row"] = int(index) + 2
+        record["import_warnings"] = validate_address(record)
+        orders.append(record)
+    return ParsedImport(orders=orders, issues=issues, sha256=sha256(file_bytes).hexdigest())
