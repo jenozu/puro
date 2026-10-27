@@ -43,12 +43,12 @@
         "id": 4,
         "title": "Enforce order-level Ship To address and line-level destination rules",
         "description": "Map RDR12 *S shipping columns exclusively",
-        "status": "pending",
+        "status": "done",
         "dependencies": [
           3
         ],
         "priority": "high",
-        "details": "Map RDR12 *S shipping columns exclusively; keep CRD1 selected Ship To as optional reviewed reference; never use *B billing. Validate province/country/postal/units; block multi-destination orders pending explicit split.\n\nPROGRESS NOTE — 2026-10-27 audit: RDR12 *S fields enforced, *B fields excluded, Canadian postal/province checks and line-level destination conflict detection, with regression tests. Carrier payload mapping and full address/multi-destination handling remain. NOT done.",
+        "details": "Map RDR12 *S shipping columns exclusively; keep CRD1 selected Ship To as optional reviewed reference; never use *B billing. Validate province/country/postal/units; block multi-destination orders pending explicit split.\n\nPROGRESS NOTE — 2026-10-27 audit: RDR12 *S fields enforced, *B fields excluded, Canadian postal/province checks and line-level destination conflict detection, with regression tests. Carrier payload mapping and full address/multi-destination handling remain. NOT done.\n\nCOMPLETED: deterministic shipping-only recipient snapshot and normalized Canadian postal/province, no Bill To fallback, placeholders and line-level conflicts rejected; CI green, PR #5.",
         "testStrategy": "A deliberately different Bill To never appears in recipient payload; missing RDR12 fields and multiple line ShipToCode combinations block shipping.",
         "subtasks": []
       },
