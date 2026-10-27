@@ -5,10 +5,10 @@
         "id": 1,
         "title": "Bootstrap Python app, configuration and test infrastructure",
         "description": "Create Python 3.11+ package, Streamlit entrypoint, dependency lock/requirements, typed configuration, Development default, sanitised logging, pytest unit suite ",
-        "status": "in-progress",
+        "status": "done",
         "dependencies": [],
         "priority": "high",
-        "details": "Create Python 3.11+ package, Streamlit entrypoint, dependency lock/requirements, typed configuration, Development default, sanitised logging, pytest unit suite and no-secret checks. Initial offline Streamlit importer and SQLite skeleton committed; environment/contract tests and live carrier integration remain outstanding.\n\nPROGRESS NOTE — 2026-10-27 audit: Streamlit entrypoint, dependency files, Python package, and GitHub Actions pytest workflow committed. Offline tests passed (12). Still missing typed settings, redacted structured logging, and full foundation completion checks. KEEP in-progress.",
+        "details": "Create Python 3.11+ package, Streamlit entrypoint, dependency lock/requirements, typed configuration, Development default, sanitised logging, pytest unit suite and no-secret checks. Initial offline Streamlit importer and SQLite skeleton committed; environment/contract tests and live carrier integration remain outstanding.\n\nPROGRESS NOTE — 2026-10-27 audit: Streamlit entrypoint, dependency files, Python package, and GitHub Actions pytest workflow committed. Offline tests passed (12). Still missing typed settings, redacted structured logging, and full foundation completion checks. KEEP in-progress.\n\nCOMPLETED: typed AppConfig with development default; Streamlit smoke test; allowlisted audit logging; config/secret redaction tests; unit CI passed, PR #2.",
         "testStrategy": "Start the app with no SAP/SQL driver, validate .env startup errors without exposing credentials and pass CI/mock-only test suite.",
         "subtasks": []
       },
