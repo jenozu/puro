@@ -15,6 +15,8 @@ from typing import Any
 
 import pandas as pd
 
+from .address import shipping_errors
+
 
 class ImportProblem(ValueError):
     """Import is unusable; user should correct the workbook/header."""
@@ -92,32 +94,8 @@ def _val(row: pd.Series, mapping: dict[str, str], field: str) -> str:
 
 
 def validate_address(order: dict[str, Any]) -> list[str]:
-    errors: list[str] = []
-    for field, label in (
-        ("street", "Ship To street"),
-        ("city", "Ship To city"),
-        ("province", "Ship To province"),
-        ("postal_code", "Ship To postal code"),
-        ("country", "Ship To country"),
-    ):
-        if not str(order.get(field, "")).strip():
-            errors.append(f"Missing {label}")
-    country = str(order.get("country", "")).strip().upper()
-    if country and country not in {"CA", "CAN", "CANADA"}:
-        errors.append("MVP supports Canadian destinations only")
-    province = str(order.get("province", "")).strip().upper()
-    if country in {"CA", "CAN", "CANADA"} and province and province not in {
-        "AB", "BC", "MB", "NB", "NL", "NS", "NT", "NU", "ON", "PE", "QC", "SK", "YT"
-    }:
-        errors.append("Ship To province must be a Canadian two-letter code")
-    pc = re.sub(r"\s+", "", str(order.get("postal_code", "")).upper())
-    if country in {"CA", "CAN", "CANADA"} and pc and not re.fullmatch(
-        r"[ABCEGHJ-NPRSTVXY]\d[ABCEGHJ-NPRSTV-Z]\d[ABCEGHJ-NPRSTV-Z]\d", pc
-    ):
-        errors.append("Invalid Canadian Ship To postal code")
-    if not str(order.get("ship_to_name", "")).strip():
-        errors.append("Missing Ship To recipient name")
-    return errors
+    """Validate only order-specific Ship To fields, never billing fields."""
+    return shipping_errors(order)
 
 
 def validate_package(order: dict[str, Any]) -> list[str]:
