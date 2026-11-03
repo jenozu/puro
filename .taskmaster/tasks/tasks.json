@@ -199,12 +199,12 @@
         "id": 15,
         "title": "Task 12 step: VPS systemd service and encrypted backups",
         "description": "Install deploy/puro.service (loopback only) and the age-encrypted daily backup timer for the data and labels.",
-        "status": "in-progress",
+        "status": "done",
         "dependencies": [
           11
         ],
         "priority": "high",
-        "details": "Sub-step of Task 12. Unit, backup script and timer written; backup script tested with a throwaway key (restore, prune, refuses private key). Not yet installed on the VPS; restore test from an off-box copy still to do. 2026-11-02: one-paste installer deploy/install_vps.sh (refuses unless config is development/carrier off/production not approved; verifies loopback-only bind, health, restart, boot enable, backup unit) and deploy/setup_backups.sh (private key shown once, never stored on the server; backup decrypt proved). Tested here except systemd itself; run on the VPS pending.",
+        "details": "Sub-step of Task 12. Unit, backup script and timer written; backup script tested with a throwaway key (restore, prune, refuses private key). Not yet installed on the VPS; restore test from an off-box copy still to do. 2026-11-02: one-paste installer deploy/install_vps.sh (refuses unless config is development/carrier off/production not approved; verifies loopback-only bind, health, restart, boot enable, backup unit) and deploy/setup_backups.sh (private key shown once, never stored on the server; backup decrypt proved). Tested here except systemd itself; run on the VPS pending. RESULT 2026-11-02 on VPS: install_vps.sh ALL OK. Backup decrypts with the new offline key, puro.service healthy and survives restart, listens on 127.0.0.1:8501 only, enabled at boot, backup timer active, backup unit works under systemd. Remaining operator habit: copy ~/puro-backups off the server periodically and test-restore from the offline key.",
         "testStrategy": "App survives logout and reboot, listens on 127.0.0.1 only; a backup decrypts with the offline key and the SQLite copy opens.",
         "subtasks": []
       },
