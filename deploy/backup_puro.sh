@@ -48,7 +48,7 @@ for p in sorted(src.rglob("*")):
 PY
 [ -d "$LABELS_DIR" ] && cp -a "$LABELS_DIR"/. "$STAGE/puro-backup/labels/" || true
 
-STAMP="$(date -u +%Y%m%dT%H%M%SZ)"
+STAMP="$(date -u +%Y%m%dT%H%M%SZ)-$$"
 OUT="$DEST/puro-$STAMP.tar.age"
 tar -C "$STAGE" -cf - puro-backup | age -R "$RECIPIENT_FILE" -o "$OUT.partial"
 [ "$(head -c 21 "$OUT.partial")" = "age-encryption.org/v1" ] || { rm -f "$OUT.partial"; echo "backup: output is not an age file" >&2; exit 1; }

@@ -191,7 +191,7 @@
           11
         ],
         "priority": "high",
-        "details": "Sub-step of Task 12 (does not complete it). Helper scripts/stage_a_check.py written; 20 offline checks pass in dev. VPS run and manual browser checks (no Create Shipment control, edit revokes Ready, restart keeps data) still to be recorded. 2026-11-02 VPS: tests 89 passed, stage_a_check ALL PASSED (offline). Browser checks still to do.",
+        "details": "Sub-step of Task 12 (does not complete it). Helper scripts/stage_a_check.py written; 20 offline checks pass in dev. VPS run and manual browser checks (no Create Shipment control, edit revokes Ready, restart keeps data) still to be recorded. 2026-11-02 VPS: tests 89 passed, stage_a_check ALL PASSED (offline). Browser checks still to do. Browser checks automated as tests/test_stage_a_ui.py (Streamlit AppTest, runs in CI and on the VPS preflight); it simulates the browser, it is not pixel-level. Mark done once the VPS preflight shows them passing.",
         "testStrategy": "All stage_a_check.py checks pass on the VPS; browser checklist in deploy/README.md confirmed; no carrier call made.",
         "subtasks": []
       },
@@ -204,7 +204,7 @@
           11
         ],
         "priority": "high",
-        "details": "Sub-step of Task 12. Unit, backup script and timer written; backup script tested with a throwaway key (restore, prune, refuses private key). Not yet installed on the VPS; restore test from an off-box copy still to do.",
+        "details": "Sub-step of Task 12. Unit, backup script and timer written; backup script tested with a throwaway key (restore, prune, refuses private key). Not yet installed on the VPS; restore test from an off-box copy still to do. 2026-11-02: one-paste installer deploy/install_vps.sh (refuses unless config is development/carrier off/production not approved; verifies loopback-only bind, health, restart, boot enable, backup unit) and deploy/setup_backups.sh (private key shown once, never stored on the server; backup decrypt proved). Tested here except systemd itself; run on the VPS pending.",
         "testStrategy": "App survives logout and reboot, listens on 127.0.0.1 only; a backup decrypts with the offline key and the SQLite copy opens.",
         "subtasks": []
       },
@@ -231,7 +231,7 @@
           16
         ],
         "priority": "high",
-        "details": "Sub-step of Task 12. Requires confirmed Development credentials (not Production), operator go-ahead before PURO_ENABLE_CARRIER=true and before the create step. No retry of CreateShipment after a timeout or unclear result: record needs_reconciliation and ask. Never set Production variables.",
+        "details": "Sub-step of Task 12. Requires confirmed Development credentials (not Production), operator go-ahead before PURO_ENABLE_CARRIER=true and before the create step. No retry of CreateShipment after a timeout or unclear result: record needs_reconciliation and ask. Never set Production variables. 2026-11-02: runner scripts/stage_b_dev_shipment.py written with mocked tests (refuses Production, requires per-command PURO_ENABLE_CARRIER=true and --approve-development-shipment, throwaway DB, one fixed order, never retries, exit 4 on needs_reconciliation). NOT yet run live: waiting for operator go-ahead and Test Aid recipient.",
         "testStrategy": "ShipmentPIN and piece PIN(s) saved, label PDF verified and archived, restart keeps the record. Results logged with all real data redacted.",
         "subtasks": []
       },
