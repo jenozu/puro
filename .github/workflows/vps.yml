@@ -9,7 +9,7 @@ name: VPS action (autopilot)
 #   * manual "Run workflow" button (workflow_dispatch)
 # Output is redacted on the VPS before it reaches this public log. See docs/AUTOPILOT.md.
 
-run-name: "vps: ${{ inputs.action || github.event.head_commit.message }}"
+run-name: "vps: ${{ inputs.action || github.ref_name }}"
 
 on:
   push:
