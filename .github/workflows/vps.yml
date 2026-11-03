@@ -1,0 +1,118 @@
+name: VPS action (autopilot)
+
+# Runs allowlisted actions on the VPS through the forced-command deploy key.
+#
+# Two triggers, both need write access to this repo (fork PRs never get secrets or push events):
+#   * push to auto/**, ops/**, task/**, test/** whose head commit message contains a tag such as
+#       [vps: test]   or   [vps: test stage-a verify-wsdl]
+#     (actions run in order against the pushed commit; no tag = nothing runs)
+#   * manual "Run workflow" button (workflow_dispatch)
+# Output is redacted on the VPS before it reaches this public log. See docs/AUTOPILOT.md.
+
+run-name: "vps: ${{ inputs.action || github.event.head_commit.message }}"
+
+on:
+  push:
+    branches: ['auto/**', 'ops/**', 'task/**', 'test/**']
+  workflow_dispatch:
+    inputs:
+      action:
+        description: Allowlisted VPS action
+        required: true
+        type: choice
+        options:
+          - status
+          - test
+          - stage-a
+          - verify-wsdl
+          - stage-b-validate
+          - stage-b-create
+          - service-health
+          - log-tail
+      ref:
+        description: Branch or SHA to check out first (main, auto/*, task/*, ops/*, test/*)
+        required: false
+        default: main
+      lines:
+        description: log-tail only - number of lines (1-400)
+        required: false
+        default: '80'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: vps
+  cancel-in-progress: false
+
+jobs:
+  vps:
+    if: github.repository == 'jenozu/puro' && (github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[vps:'))
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - name: Work out what to run
+        id: plan
+        env:
+          ENABLED: ${{ vars.AUTOPILOT_VPS_ENABLED }}
+          EVENT: ${{ github.event_name }}
+          MSG: ${{ github.event.head_commit.message }}
+          SHA: ${{ github.sha }}
+          IN_ACTION: ${{ inputs.action }}
+          IN_REF: ${{ inputs.ref }}
+          IN_LINES: ${{ inputs.lines }}
+        run: |
+          if [ "$ENABLED" = "false" ]; then echo "VPS actions are switched off (repo variable AUTOPILOT_VPS_ENABLED=false)"; exit 1; fi
+          allowed=" status test stage-a verify-wsdl stage-b-validate stage-b-create service-health log-tail "
+          if [ "$EVENT" = "workflow_dispatch" ]; then
+            echo "$IN_REF" | grep -Eq '^(main|(auto|task|ops|test)/[A-Za-z0-9._-]{1,80}|[0-9a-f]{7,40})$' || { echo "bad ref"; exit 1; }
+            echo "$IN_LINES" | grep -Eq '^[0-9]{1,3}$' || { echo "bad lines"; exit 1; }
+            if [ "$IN_ACTION" = "log-tail" ]; then cmds="log-tail $IN_LINES"; else cmds="$IN_ACTION $IN_REF"; fi
+          else
+            tag="$(printf '%s' "$MSG" | grep -oE '\[vps:[a-z0-9 -]+\]' | head -1 | sed -E 's/^\[vps:[[:space:]]*//; s/[[:space:]]*\]$//')"
+            [ -n "$tag" ] || { echo "no [vps: ...] tag"; exit 1; }
+            cmds=""
+            for a in $tag; do
+              case "$allowed" in *" $a "*) ;; *) echo "not allowed: $a"; exit 1 ;; esac
+              if [ "$a" = "log-tail" ]; then cmds+="log-tail 120"$'\n'; else cmds+="$a $SHA"$'\n'; fi
+            done
+          fi
+          { echo "cmds<<EOF"; printf '%s\n' "$cmds" | sed '/^$/d'; echo "EOF"; } >> "$GITHUB_OUTPUT"
+          printf 'Will run:\n%s\n' "$cmds"
+
+      - name: Run on VPS
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_PORT: ${{ secrets.VPS_PORT }}
+          VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+          VPS_KNOWN_HOSTS: ${{ secrets.VPS_KNOWN_HOSTS }}
+          CMDS: ${{ steps.plan.outputs.cmds }}
+        run: |
+          for v in VPS_HOST VPS_SSH_KEY VPS_KNOWN_HOSTS; do
+            [ -n "${!v}" ] || { echo "Missing repository secret $v (see docs/AUTOPILOT.md setup)"; exit 1; }
+          done
+          install -d -m 700 ~/.ssh
+          printf '%s\n' "$VPS_SSH_KEY" > ~/.ssh/puro_ci && chmod 600 ~/.ssh/puro_ci
+          printf '%s\n' "$VPS_KNOWN_HOSTS" > ~/.ssh/known_hosts && chmod 600 ~/.ssh/known_hosts
+          final=0
+          echo "## VPS results" >> "$GITHUB_STEP_SUMMARY"
+          while IFS= read -r cmd; do
+            [ -n "$cmd" ] || continue
+            echo "::group::$cmd"
+            rc=0
+            ssh -n -i ~/.ssh/puro_ci -p "${VPS_PORT:-22}" \
+                -o BatchMode=yes -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes \
+                -o UserKnownHostsFile=~/.ssh/known_hosts -o ConnectTimeout=20 -o ServerAliveInterval=30 \
+                "puro-ci@$VPS_HOST" "$cmd" > out.txt 2>&1 || rc=$?
+            cat out.txt
+            echo "::endgroup::"
+            {
+              echo "### \`$cmd\` exit $rc"
+              echo '```'
+              tail -n 80 out.txt
+              echo '```'
+            } >> "$GITHUB_STEP_SUMMARY"
+            if [ "$rc" != 0 ]; then final=$rc; echo "Stopping after failed action: $cmd"; break; fi
+          done <<< "$CMDS"
+          rm -f ~/.ssh/puro_ci
+          exit $final

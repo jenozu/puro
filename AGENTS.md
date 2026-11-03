@@ -4,6 +4,8 @@ Read `README.md`, `docs/MVP.md`, `docs/PRD.md`, `docs/BUILD_PLAN.md`, `docs/SAP_
 
 **Task Master is the task authority:** inspect `.taskmaster/tasks/tasks.json`, select the next ready task with the installed `task-master next` command when available, implement and test one task, update status using Task Master; see `docs/TASKMASTER.md`. Never silently regenerate the seeded tasks from PRD without reviewing changes.
 
+**Scheduled (autopilot) sessions** also follow `docs/AUTOPILOT.md`: one subtask per run, VPS checks only through the allowlisted `vps.yml` actions, protected paths and stop conditions as listed there.
+
 ## Non-negotiable rules
 
 1. The destination is order-specific SAP `RDR12.*S` **Ship To**, never any `*B` Bill To field. Fail closed on missing/ambiguous shipping data.
