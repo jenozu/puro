@@ -50,7 +50,7 @@ def journal(tmp_path):
 class FakeCarrier:
     def __init__(self, *, validate=None, create=None, fail_create=False):
         self.validate = validate if validate is not None else {
-            "ResponseInformation": {"Errors": {"Error": []}}
+            "ResponseInformation": {"Errors": {"Error": []}}, "ValidShipment": True,
         }
         self.create = create if create is not None else {
             "ResponseInformation": {"Errors": {"Error": []}},
@@ -145,3 +145,16 @@ def test_unknown_response_is_not_false_success(tmp_path):
     carrier.create = None
     r = ShippingCoordinator(config(), j, carrier).ship("100", pickup_type="DropOff")
     assert r.state == "needs_reconciliation"
+
+
+@pytest.mark.parametrize("response", [
+    {"ResponseInformation": {"Errors": {"Error": []}}, "ValidShipment": False},
+    {"ResponseInformation": {"Errors": {"Error": []}}},  # flag absent
+])
+def test_validshipment_not_true_stops_before_claim_and_create(tmp_path, response):
+    j = journal(tmp_path)
+    carrier = FakeCarrier(validate=response)
+    with pytest.raises(ShipmentValidationError, match="did not confirm"):
+        ShippingCoordinator(config(), j, carrier).ship("100", pickup_type="DropOff")
+    assert carrier.operations == ["ValidateShipment"]
+    assert j.store.get_order("100")["status"] == "ready"

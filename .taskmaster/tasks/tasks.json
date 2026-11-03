@@ -191,7 +191,7 @@
           11
         ],
         "priority": "high",
-        "details": "Sub-step of Task 12 (does not complete it). Helper scripts/stage_a_check.py written; 20 offline checks pass in dev. VPS run and manual browser checks (no Create Shipment control, edit revokes Ready, restart keeps data) still to be recorded.",
+        "details": "Sub-step of Task 12 (does not complete it). Helper scripts/stage_a_check.py written; 20 offline checks pass in dev. VPS run and manual browser checks (no Create Shipment control, edit revokes Ready, restart keeps data) still to be recorded. 2026-11-02 VPS: tests 89 passed, stage_a_check ALL PASSED (offline). Browser checks still to do.",
         "testStrategy": "All stage_a_check.py checks pass on the VPS; browser checklist in deploy/README.md confirmed; no carrier call made.",
         "subtasks": []
       },
@@ -212,12 +212,12 @@
         "id": 16,
         "title": "Task 12 step: Stage B pre-flight against the real Development WSDLs",
         "description": "Run scripts/verify_wsdl_wrappers.py on the VPS to prove request wrappers and response paths match the real WSDLs before any live call.",
-        "status": "pending",
+        "status": "done",
         "dependencies": [
           11
         ],
         "priority": "high",
-        "details": "Sub-step of Task 12. Verifier written and mechanics-tested on a fictional fixture only; it has not seen the real WSDLs. Review the printed top-level response fields (for example whether ValidateShipment returns a validity flag that shipping.py should check) and log any mismatch as a bug task with a test.",
+        "details": "Sub-step of Task 12. Verifier written and mechanics-tested on a fictional fixture only; it has not seen the real WSDLs. Review the printed top-level response fields (for example whether ValidateShipment returns a validity flag that shipping.py should check) and log any mismatch as a bug task with a test. RESULT 2026-11-02 on VPS: ALL PASSED against the real Development Shipping and ShippingDocuments WSDLs (endpoints devwebservices.purolator.com; Validate/Create/GetDocuments requests serialize; response paths present). Found bug task 19.",
         "testStrategy": "Verifier reports no FAIL on all Development WSDLs; any mismatch fixed with tests before Task 17.",
         "subtasks": []
       },
@@ -246,6 +246,19 @@
         "priority": "high",
         "details": "Found during Task 12 Stage A on the VPS (88 passed, 1 failed). CI has no such variables so it stayed green. Fix: tests/conftest.py autouse fixture clears PURO*/DEFAULT_SENDER_* variables and disables load_dotenv so tests match CI and never read real credentials. Also added scripts/vps_preflight.sh, which lists exported variable NAMES because shell exports override .env (load_dotenv override=False).",
         "testStrategy": "Full suite passes with a polluted environment plus a fake .env, and in a clean environment (89 passed both).",
+        "subtasks": []
+      },
+      {
+        "id": 19,
+        "title": "Bug: ValidateShipment ValidShipment flag was ignored",
+        "description": "shipping.py only read ResponseInformation errors; the real Development WSDL's ValidateShipmentResponse also has ValidShipment.",
+        "status": "done",
+        "dependencies": [
+          16
+        ],
+        "priority": "high",
+        "details": "Found by scripts/verify_wsdl_wrappers.py against the real Development WSDLs (Task 16 pre-flight). A not-valid reply without error entries would have proceeded to the journal claim and CreateShipment. Fix: ShippingCoordinator now requires ValidShipment to be literally True, otherwise raises before any claim. Not yet seen against the live Development service; if Development returns the flag absent or false for a good shipment, Task 17 will show it on ValidateShipment, which creates nothing.",
+        "testStrategy": "False and absent flag both stop before claim/Create (new parametrized test, verified failing without the fix); full suite 91 passed.",
         "subtasks": []
       }
     ]

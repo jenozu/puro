@@ -85,6 +85,10 @@ class ShippingCoordinator:
         errors = _carrier_errors(result)
         if errors:
             raise ShipmentValidationError("Carrier validation rejected: " + ",".join(errors))
+        # The WSDL's ValidateShipmentResponse carries an explicit ValidShipment flag.
+        # Anything other than a literal True (false or absent) must stop before the claim.
+        if _get(result, "ValidShipment") is not True:
+            raise ShipmentValidationError("Carrier did not confirm the shipment as valid")
 
         shipment_id, attempt_id = self.journal.claim(
             str(doc_entry), environment=self.config.environment,

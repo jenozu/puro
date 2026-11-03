@@ -26,4 +26,4 @@ $PY scripts/verify_wsdl_wrappers.py --wsdl-dir "$WSDL_DIR"
 echo "== host =="
 printf 'age: '; (command -v age >/dev/null && age --version) || echo "not installed"
 printf 'listening 850x: '; ss -ltn 2>/dev/null | grep -E ':850[0-9]\b' | awk '{print $4}' | tr '\n' ' '; echo
-printf 'puro.service: '; systemctl is-active puro 2>/dev/null || echo "not installed"
+state=$(systemctl is-active puro 2>/dev/null); echo "puro.service: ${state:-not installed}"
