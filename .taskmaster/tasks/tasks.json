@@ -181,6 +181,59 @@
         "details": "Add GetFullEstimate, GetServicesOptions and valid service selection; third-party payer only if supported; Voids and manifests with confirmations, thermal ZPL after printer/label validation. Scope international separately.",
         "testStrategy": "No regressions in MVP safety tests; stale estimates invalidated on shipment edits; optional services feature-flagged.",
         "subtasks": []
+      },
+      {
+        "id": 14,
+        "title": "Task 12 step: Stage A offline validation on the VPS",
+        "description": "Run scripts/stage_a_check.py and the browser checks on the VPS with carrier off.",
+        "status": "in-progress",
+        "dependencies": [
+          11
+        ],
+        "priority": "high",
+        "details": "Sub-step of Task 12 (does not complete it). Helper scripts/stage_a_check.py written; 20 offline checks pass in dev. VPS run and manual browser checks (no Create Shipment control, edit revokes Ready, restart keeps data) still to be recorded.",
+        "testStrategy": "All stage_a_check.py checks pass on the VPS; browser checklist in deploy/README.md confirmed; no carrier call made.",
+        "subtasks": []
+      },
+      {
+        "id": 15,
+        "title": "Task 12 step: VPS systemd service and encrypted backups",
+        "description": "Install deploy/puro.service (loopback only) and the age-encrypted daily backup timer for the data and labels.",
+        "status": "in-progress",
+        "dependencies": [
+          11
+        ],
+        "priority": "high",
+        "details": "Sub-step of Task 12. Unit, backup script and timer written; backup script tested with a throwaway key (restore, prune, refuses private key). Not yet installed on the VPS; restore test from an off-box copy still to do.",
+        "testStrategy": "App survives logout and reboot, listens on 127.0.0.1 only; a backup decrypts with the offline key and the SQLite copy opens.",
+        "subtasks": []
+      },
+      {
+        "id": 16,
+        "title": "Task 12 step: Stage B pre-flight against the real Development WSDLs",
+        "description": "Run scripts/verify_wsdl_wrappers.py on the VPS to prove request wrappers and response paths match the real WSDLs before any live call.",
+        "status": "pending",
+        "dependencies": [
+          11
+        ],
+        "priority": "high",
+        "details": "Sub-step of Task 12. Verifier written and mechanics-tested on a fictional fixture only; it has not seen the real WSDLs. Review the printed top-level response fields (for example whether ValidateShipment returns a validity flag that shipping.py should check) and log any mismatch as a bug task with a test.",
+        "testStrategy": "Verifier reports no FAIL on all Development WSDLs; any mismatch fixed with tests before Task 17.",
+        "subtasks": []
+      },
+      {
+        "id": 17,
+        "title": "Task 12 step: one supervised Development shipment (Stage B)",
+        "description": "After Task 16 and explicit operator approval, enable the carrier flag locally and create exactly one Development shipment using Purolator Developer Test Aid addresses.",
+        "status": "pending",
+        "dependencies": [
+          11,
+          16
+        ],
+        "priority": "high",
+        "details": "Sub-step of Task 12. Requires confirmed Development credentials (not Production), operator go-ahead before PURO_ENABLE_CARRIER=true and before the create step. No retry of CreateShipment after a timeout or unclear result: record needs_reconciliation and ask. Never set Production variables.",
+        "testStrategy": "ShipmentPIN and piece PIN(s) saved, label PDF verified and archived, restart keeps the record. Results logged with all real data redacted.",
+        "subtasks": []
       }
     ]
   }

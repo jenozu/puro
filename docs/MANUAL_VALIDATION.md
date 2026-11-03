@@ -18,10 +18,13 @@
 4. Edit the address and make sure Ready is revoked until reviewed; reimport and restart to confirm the stored order is preserved.
 5. Confirm the interface has **no enabled Create Shipment control** while the carrier flag is off.
 
+Operator helper: `python scripts/stage_a_check.py` writes two fictional workbooks and runs the offline importer/store checks (see `deploy/README.md`). The browser checks in steps 4–5 remain manual.
+
 ## Stage B — Development environment test (authorized, no production charges)
 
 1. Configure Development key/password/account and the approved sender information in **local** `.env`; keep Production authorization false.
 2. Review Development WSDL endpoint host; it must be `devwebservices.purolator.com` over HTTPS. Check the real WSDL/header types in Zeep. Match service/version and operation request wrappers to the WSDL—do not assume mock-only tests prove this.
+   Operator helper: `python scripts/verify_wsdl_wrappers.py --wsdl-dir <private wsdl dir>` builds the real request envelopes against the WSDLs without sending anything and checks the response paths Puro reads.
 3. Enable `PURO_ENABLE_CARRIER=true` only after the above check and with authorized test data. Test carrier validation before creation.
 4. Prepare a simple one-piece Domestic Ground shipment with explicit physical dimensions and actual allowed addresses per Purolator Development specifications.
 5. Explicitly submit one **Development** shipment; confirm SOAP response structure, ShipmentPIN and piece PIN(s); request GetDocuments and verify the PDF barcodes/recipient/service/parcel count.

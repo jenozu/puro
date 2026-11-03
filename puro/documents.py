@@ -77,6 +77,20 @@ class LabelResult:
     message: str = ""
 
 
+def documents_request(pin: str) -> dict:
+    """GetDocuments request body (shared with the Stage B wrapper verifier)."""
+    return {
+        "OutputType": "PDF",
+        "Synchronous": True,
+        "DocumentCriterium": {
+            "DocumentCriteria": [{
+                "PIN": {"Value": pin},
+                "DocumentTypes": {"DocumentType": ["DomesticBillOfLading"]},
+            }]
+        },
+    }
+
+
 class LabelService:
     def __init__(self, config: AppConfig, journal: ShipmentJournal,
                  carrier: PurolatorSOAP):
@@ -102,16 +116,7 @@ class LabelService:
         if state == "created":
             self.journal.mark_label_pending(shipment_id)
 
-        req = {
-            "OutputType": "PDF",
-            "Synchronous": True,
-            "DocumentCriterium": {
-                "DocumentCriteria": [{
-                    "PIN": {"Value": pin},
-                    "DocumentTypes": {"DocumentType": ["DomesticBillOfLading"]},
-                }]
-            },
-        }
+        req = documents_request(pin)
         try:
             response = self.carrier.call(
                 "documents", "GetDocuments", req,

@@ -1,0 +1,9 @@
+[Unit]
+Description=Encrypted backup of Puro data and labels
+
+[Service]
+Type=oneshot
+User=puro
+Group=puro
+ExecStart=/home/puro/puro/deploy/backup_puro.sh
+Nice=10
