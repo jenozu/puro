@@ -234,6 +234,19 @@
         "details": "Sub-step of Task 12. Requires confirmed Development credentials (not Production), operator go-ahead before PURO_ENABLE_CARRIER=true and before the create step. No retry of CreateShipment after a timeout or unclear result: record needs_reconciliation and ask. Never set Production variables.",
         "testStrategy": "ShipmentPIN and piece PIN(s) saved, label PDF verified and archived, restart keeps the record. Results logged with all real data redacted.",
         "subtasks": []
+      },
+      {
+        "id": 18,
+        "title": "Bug: tests read the operator's shell environment and real .env",
+        "description": "test_config_validation_does_not_make_network_calls failed on the VPS because DEFAULT_SENDER_* and PURO_LABELS_DIR were exported in the shell.",
+        "status": "done",
+        "dependencies": [
+          11
+        ],
+        "priority": "high",
+        "details": "Found during Task 12 Stage A on the VPS (88 passed, 1 failed). CI has no such variables so it stayed green. Fix: tests/conftest.py autouse fixture clears PURO*/DEFAULT_SENDER_* variables and disables load_dotenv so tests match CI and never read real credentials. Also added scripts/vps_preflight.sh, which lists exported variable NAMES because shell exports override .env (load_dotenv override=False).",
+        "testStrategy": "Full suite passes with a polluted environment plus a fake .env, and in a clean environment (89 passed both).",
+        "subtasks": []
       }
     ]
   }
