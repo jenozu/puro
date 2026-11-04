@@ -20,7 +20,7 @@ from .config import AppConfig
 
 
 WSDL_FILES = {
-    "shipping": ("ShippingService.wsdl", "2.2"),
+    "shipping": ("ShippingService.wsdl", "2.1"),
     "documents": ("ShippingDocumentsService.wsdl", "1.4"),
     "estimates": ("EstimatingService.wsdl", "2.2"),
     "availability": ("ServiceAvailabilityService.wsdl", "2.0"),

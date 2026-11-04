@@ -56,7 +56,7 @@ DEFAULT_PACKAGE = {
     "width_in": 0.0,
     "height_in": 0.0,
     "pieces": 1,
-    "service": "PurolatorGround",
+    "service": "PurolatorExpress",
     "payer": "Sender",
     "receiver_account": "",
 }
