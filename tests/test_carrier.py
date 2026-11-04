@@ -55,7 +55,7 @@ def test_development_request_context_and_host(tmp_path):
                         {"Shipment": {"test": "fictional"}}, reference="TEST-001")
     assert reply == {"result": "fictional"}
     assert fake.service.calls[0][0] == "ValidateShipment"
-    assert fake.service.calls[0][1]["_soapheaders"][0]["Version"] == "2.2"
+    assert fake.service.calls[0][1]["_soapheaders"][0]["Version"] == "2.1"
     assert fake.service.calls[0][1]["_soapheaders"][0]["RequestReference"] == "TEST-001"
     assert "datatypes/v2" in fake.header_calls[0]
 

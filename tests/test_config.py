@@ -41,6 +41,12 @@ def test_secret_values_cannot_appear_in_repr_or_readiness_errors(monkeypatch):
 
 
 def test_config_validation_does_not_make_network_calls(monkeypatch):
+    for key in (
+        "PUROLATOR_API_KEY", "PUROLATOR_API_PASSWORD", "PUROLATOR_ACCOUNT_NUMBER",
+        "DEFAULT_SENDER_NAME", "DEFAULT_SENDER_STREET_NO", "DEFAULT_SENDER_STREET",
+        "DEFAULT_SENDER_CITY", "DEFAULT_SENDER_POSTAL_CODE", "DEFAULT_SENDER_PHONE",
+    ):
+        monkeypatch.delenv(key, raising=False)
     monkeypatch.setenv("PUROLATOR_ENV", "production")
     settings = AppConfig.from_environment(dotenv=False)
     assert settings.environment == "production"
