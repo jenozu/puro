@@ -1,0 +1,31 @@
+# Puro Streamlit app, loopback only (reach it through an SSH tunnel).
+# Install:  sudo cp deploy/puro.service /etc/systemd/system/puro.service
+# Secrets stay in /home/puro/puro/.env (the app loads it itself); no EnvironmentFile here.
+[Unit]
+Description=Puro shipping workstation (Streamlit, 127.0.0.1:8501)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=puro
+Group=puro
+WorkingDirectory=/home/puro/puro
+ExecStart=/home/puro/puro/.venv/bin/streamlit run streamlit_app.py \
+  --server.address 127.0.0.1 --server.port 8501 --server.headless true \
+  --browser.gatherUsageStats false
+Restart=on-failure
+RestartSec=5
+
+# Hardening. Data and labels are the only writable paths ('-' = ignore if absent).
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=/home/puro/puro-data /home/puro/puro-labels -/home/puro/.streamlit
+ProtectKernelTunables=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+
+[Install]
+WantedBy=multi-user.target

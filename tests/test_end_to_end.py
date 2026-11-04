@@ -56,7 +56,8 @@ def test_complete_offline_shipping_acceptance_path(tmp_path):
                 assert "99 Billing Avenue" not in str(payload)
                 assert "Toronto" not in str(payload)
             if operation == "ValidateShipment":
-                return {"ResponseInformation": {"Errors": {"Error": []}}}
+                return {"ResponseInformation": {"Errors": {"Error": []}},
+                        "ValidShipment": True}
             if operation == "CreateShipment":
                 return {
                     "ResponseInformation": {"Errors": {"Error": []}},

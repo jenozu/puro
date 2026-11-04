@@ -181,6 +181,85 @@
         "details": "Add GetFullEstimate, GetServicesOptions and valid service selection; third-party payer only if supported; Voids and manifests with confirmations, thermal ZPL after printer/label validation. Scope international separately.",
         "testStrategy": "No regressions in MVP safety tests; stale estimates invalidated on shipment edits; optional services feature-flagged.",
         "subtasks": []
+      },
+      {
+        "id": 14,
+        "title": "Task 12 step: Stage A offline validation on the VPS",
+        "description": "Run scripts/stage_a_check.py and the browser checks on the VPS with carrier off.",
+        "status": "in-progress",
+        "dependencies": [
+          11
+        ],
+        "priority": "high",
+        "details": "Sub-step of Task 12 (does not complete it). Helper scripts/stage_a_check.py written; 20 offline checks pass in dev. VPS run and manual browser checks (no Create Shipment control, edit revokes Ready, restart keeps data) still to be recorded. 2026-11-02 VPS: tests 89 passed, stage_a_check ALL PASSED (offline). Browser checks still to do. Browser checks automated as tests/test_stage_a_ui.py (Streamlit AppTest, runs in CI and on the VPS preflight); it simulates the browser, it is not pixel-level. Mark done once the VPS preflight shows them passing.",
+        "testStrategy": "All stage_a_check.py checks pass on the VPS; browser checklist in deploy/README.md confirmed; no carrier call made.",
+        "subtasks": []
+      },
+      {
+        "id": 15,
+        "title": "Task 12 step: VPS systemd service and encrypted backups",
+        "description": "Install deploy/puro.service (loopback only) and the age-encrypted daily backup timer for the data and labels.",
+        "status": "done",
+        "dependencies": [
+          11
+        ],
+        "priority": "high",
+        "details": "Sub-step of Task 12. Unit, backup script and timer written; backup script tested with a throwaway key (restore, prune, refuses private key). Not yet installed on the VPS; restore test from an off-box copy still to do. 2026-11-02: one-paste installer deploy/install_vps.sh (refuses unless config is development/carrier off/production not approved; verifies loopback-only bind, health, restart, boot enable, backup unit) and deploy/setup_backups.sh (private key shown once, never stored on the server; backup decrypt proved). Tested here except systemd itself; run on the VPS pending. RESULT 2026-11-02 on VPS: install_vps.sh ALL OK. Backup decrypts with the new offline key, puro.service healthy and survives restart, listens on 127.0.0.1:8501 only, enabled at boot, backup timer active, backup unit works under systemd. Remaining operator habit: copy ~/puro-backups off the server periodically and test-restore from the offline key.",
+        "testStrategy": "App survives logout and reboot, listens on 127.0.0.1 only; a backup decrypts with the offline key and the SQLite copy opens.",
+        "subtasks": []
+      },
+      {
+        "id": 16,
+        "title": "Task 12 step: Stage B pre-flight against the real Development WSDLs",
+        "description": "Run scripts/verify_wsdl_wrappers.py on the VPS to prove request wrappers and response paths match the real WSDLs before any live call.",
+        "status": "done",
+        "dependencies": [
+          11
+        ],
+        "priority": "high",
+        "details": "Sub-step of Task 12. Verifier written and mechanics-tested on a fictional fixture only; it has not seen the real WSDLs. Review the printed top-level response fields (for example whether ValidateShipment returns a validity flag that shipping.py should check) and log any mismatch as a bug task with a test. RESULT 2026-11-02 on VPS: ALL PASSED against the real Development Shipping and ShippingDocuments WSDLs (endpoints devwebservices.purolator.com; Validate/Create/GetDocuments requests serialize; response paths present). Found bug task 19.",
+        "testStrategy": "Verifier reports no FAIL on all Development WSDLs; any mismatch fixed with tests before Task 17.",
+        "subtasks": []
+      },
+      {
+        "id": 17,
+        "title": "Task 12 step: one supervised Development shipment (Stage B)",
+        "description": "After Task 16 and explicit operator approval, enable the carrier flag locally and create exactly one Development shipment using Purolator Developer Test Aid addresses.",
+        "status": "pending",
+        "dependencies": [
+          11,
+          16
+        ],
+        "priority": "high",
+        "details": "Sub-step of Task 12. Requires confirmed Development credentials (not Production), operator go-ahead before PURO_ENABLE_CARRIER=true and before the create step. No retry of CreateShipment after a timeout or unclear result: record needs_reconciliation and ask. Never set Production variables. 2026-11-02: runner scripts/stage_b_dev_shipment.py written with mocked tests (refuses Production, requires per-command PURO_ENABLE_CARRIER=true and --approve-development-shipment, throwaway DB, one fixed order, never retries, exit 4 on needs_reconciliation). NOT yet run live: waiting for operator go-ahead and Test Aid recipient.",
+        "testStrategy": "ShipmentPIN and piece PIN(s) saved, label PDF verified and archived, restart keeps the record. Results logged with all real data redacted.",
+        "subtasks": []
+      },
+      {
+        "id": 18,
+        "title": "Bug: tests read the operator's shell environment and real .env",
+        "description": "test_config_validation_does_not_make_network_calls failed on the VPS because DEFAULT_SENDER_* and PURO_LABELS_DIR were exported in the shell.",
+        "status": "done",
+        "dependencies": [
+          11
+        ],
+        "priority": "high",
+        "details": "Found during Task 12 Stage A on the VPS (88 passed, 1 failed). CI has no such variables so it stayed green. Fix: tests/conftest.py autouse fixture clears PURO*/DEFAULT_SENDER_* variables and disables load_dotenv so tests match CI and never read real credentials. Also added scripts/vps_preflight.sh, which lists exported variable NAMES because shell exports override .env (load_dotenv override=False).",
+        "testStrategy": "Full suite passes with a polluted environment plus a fake .env, and in a clean environment (89 passed both).",
+        "subtasks": []
+      },
+      {
+        "id": 19,
+        "title": "Bug: ValidateShipment ValidShipment flag was ignored",
+        "description": "shipping.py only read ResponseInformation errors; the real Development WSDL's ValidateShipmentResponse also has ValidShipment.",
+        "status": "done",
+        "dependencies": [
+          16
+        ],
+        "priority": "high",
+        "details": "Found by scripts/verify_wsdl_wrappers.py against the real Development WSDLs (Task 16 pre-flight). A not-valid reply without error entries would have proceeded to the journal claim and CreateShipment. Fix: ShippingCoordinator now requires ValidShipment to be literally True, otherwise raises before any claim. Not yet seen against the live Development service; if Development returns the flag absent or false for a good shipment, Task 17 will show it on ValidateShipment, which creates nothing.",
+        "testStrategy": "False and absent flag both stop before claim/Create (new parametrized test, verified failing without the fix); full suite 91 passed.",
+        "subtasks": []
       }
     ]
   }

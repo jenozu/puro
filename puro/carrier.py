@@ -49,6 +49,17 @@ class CarrierOutcomeUnknown(CarrierRequestError):
     """CreateShipment may have reached Purolator; DO NOT automatically retry."""
 
 
+def request_context(client: Any, service: str, reference: str | None = None) -> Any:
+    """Build the WSDL RequestContext SOAP header (shared with the Stage B verifier)."""
+    version = WSDL_FILES[service][1]
+    datatype_version = "v1" if service == "documents" else "v2"
+    namespace = f"http://purolator.com/pws/datatypes/{datatype_version}"
+    return client.get_element(f"{{{namespace}}}RequestContext")(
+        Version=version, Language="en", GroupID="Puro",
+        RequestReference=reference or str(uuid4()),
+    )
+
+
 class PurolatorSOAP:
     def __init__(self, config: AppConfig, wsdl_dir: str | Path,
                  *, client_factory: Callable[..., Any] | None = None):
@@ -119,14 +130,8 @@ class PurolatorSOAP:
                 "Production SOAP operation requires explicit operator approval"
             )
         client = self._load(service)
-        version = WSDL_FILES[service][1]
-        datatype_version = "v1" if service == "documents" else "v2"
-        namespace = f"http://purolator.com/pws/datatypes/{datatype_version}"
         try:
-            header = client.get_element(f"{{{namespace}}}RequestContext")(
-                Version=version, Language="en", GroupID="Puro",
-                RequestReference=reference or str(uuid4()),
-            )
+            header = request_context(client, service, reference)
             method = getattr(client.service, operation)
             return method(_soapheaders=[header], **payload)
         except (requests.exceptions.Timeout,
