@@ -181,6 +181,84 @@
         "details": "Add GetFullEstimate, GetServicesOptions and valid service selection; third-party payer only if supported; Voids and manifests with confirmations, thermal ZPL after printer/label validation. Scope international separately.",
         "testStrategy": "No regressions in MVP safety tests; stale estimates invalidated on shipment edits; optional services feature-flagged.",
         "subtasks": []
+      },
+      {
+        "id": 14,
+        "title": "Record Stage A offline validation (Windows workstation)",
+        "description": "Stage A of docs/MANUAL_VALIDATION.md passed on the approved Windows workstation with synthetic data and the carrier off.",
+        "details": "Verified with fictional orders: import of five orders; every order flagged for review until ship-to fields are entered and confirmed; blank postal code blocks Ready; editing an address revokes Ready (audit log draft_updated_review_revoked); Ready needs the manual address attestation; data survives an app restart; no enabled create-shipment control while the carrier flag is off. 85 tests pass on Windows when tests/test_autopilot_dispatcher.py is ignored (it needs fcntl).",
+        "testStrategy": "Results recorded; no real customer data used.",
+        "status": "done",
+        "priority": "medium",
+        "dependencies": [
+          11
+        ],
+        "subtasks": []
+      },
+      {
+        "id": 15,
+        "title": "Stage B step 1: ValidateShipment accepted by Purolator Development",
+        "description": "One ValidateShipment request built by the app's own payload and SOAP adapter code was accepted by the Development server.",
+        "details": "Preconditions confirmed: all four Development WSDLs point to devwebservices.purolator.com and none to Production; operations CreateShipment, ValidateShipment, GetDocuments present; request field names match the Shipping WSDL; unit values lb and in match the schema enums. Shipping RequestContext version set to 2.1 and the default service to PurolatorExpress to match the Developer Test Aid samples. Result: ValidShipment true, no errors, nothing created. PurolatorGround is not covered by the Test Aid samples and remains unverified.",
+        "testStrategy": "Validate-only call returns ValidShipment true with no errors; no shipment is created.",
+        "status": "done",
+        "priority": "high",
+        "dependencies": [
+          11
+        ],
+        "subtasks": []
+      },
+      {
+        "id": 16,
+        "title": "Stage B steps 3-5: one Development CreateShipment and GetDocuments",
+        "description": "Create exactly one Development test shipment through the app, then fetch and inspect the label PDF.",
+        "details": "Operator approval required before the carrier flag is enabled and before the single create. Use the Developer Test Aid receiver, session-only environment overrides for the carrier flag and test sender, and a loopback-only Streamlit server. Confirm ShipmentPIN and piece PINs, save the PDF, and check barcode, recipient, service and piece count. A timeout or unclear result must be recorded as needs_reconciliation and never retried.",
+        "testStrategy": "One Development shipment with PINs and a valid saved label PDF; duplicate click and restart cannot trigger a second CreateShipment.",
+        "status": "pending",
+        "priority": "high",
+        "dependencies": [
+          15
+        ],
+        "subtasks": []
+      },
+      {
+        "id": 17,
+        "title": "Replace deprecated Streamlit use_container_width",
+        "description": "Streamlit warns that use_container_width will be removed; switch to the width argument.",
+        "details": "Replace use_container_width=True with width='stretch' and False with width='content' in streamlit_app.py, then run the test suite.",
+        "testStrategy": "App smoke tests pass and the deprecation warning no longer appears.",
+        "status": "pending",
+        "priority": "low",
+        "dependencies": [
+          11
+        ],
+        "subtasks": []
+      },
+      {
+        "id": 18,
+        "title": "Make the autopilot dispatcher test portable to Windows",
+        "description": "tests/test_autopilot_dispatcher.py fails to import on Windows because scripts/autopilot/puro_ci.py imports fcntl.",
+        "details": "Guard the fcntl import or skip the test when the module is unavailable so the full suite runs on a Windows workstation.",
+        "testStrategy": "pytest runs the full suite on Windows and Linux.",
+        "status": "pending",
+        "priority": "low",
+        "dependencies": [
+          11
+        ],
+        "subtasks": []
+      },
+      {
+        "id": 19,
+        "title": "Bind Streamlit to loopback by default",
+        "description": "A plain streamlit run listens on the network; the app has no login.",
+        "details": "Add Streamlit configuration so the server address defaults to 127.0.0.1, and document the SSH tunnel and local-only start commands.",
+        "testStrategy": "Startup output shows only the localhost URL.",
+        "status": "pending",
+        "priority": "medium",
+        "dependencies": [
+          11
+        ],
+        "subtasks": []
       }
     ]
   }
