@@ -11,6 +11,8 @@ from puro.store import Store
 def test_select_review_batch_without_shipping(monkeypatch, tmp_path):
     monkeypatch.setenv("PURO_DATA_DIR", str(tmp_path))
     monkeypatch.setenv("PUROLATOR_ENV", "development")
+    # Keep the test independent of the operator's shell (a Development session may set this).
+    monkeypatch.setenv("PURO_ENABLE_CARRIER", "false")
     data = {
         "doc_entry": "5", "doc_num": "5001", "card_code": "C5",
         "customer_name": "Example Warehouse",
