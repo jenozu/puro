@@ -193,32 +193,47 @@ elif view == "Review a shipment":
                     "Check all values manually: no inferred address is approved automatically."
                 )
 
+        suggestion = order.get("suggested_address") or {}
+        use_suggestion = bool(suggestion) and not order.get("address_draft_saved")
+
+        def prefill(key: str) -> str:
+            """Saved value first; otherwise a display-only suggestion until a draft is saved."""
+            return order.get(key, "") or (suggestion.get(key, "") if use_suggestion else "")
+
+        if use_suggestion:
+            st.info(
+                "The address fields below are PRE-FILLED from the SAP text. Compare each "
+                "one with the original above, correct anything wrong, then click Save draft. "
+                "Nothing is approved until you confirm it."
+            )
+            for note in suggestion.get("notes", []):
+                st.warning(note)
         with st.form(f"review_{entry}"):
             st.markdown("#### Recipient / Ship To")
             name = st.text_input("Ship To recipient name", value=order.get("ship_to_name") or order.get("suggested_cash_recipient", ""),
                                  key=f"{entry}_name")
             c1, c2 = st.columns([1, 3])
             with c1:
-                street_no = st.text_input("Street number", value=order.get("street_no", ""),
+                street_no = st.text_input("Street number", value=prefill("street_no"),
                                           key=f"{entry}_streetno")
             with c2:
-                street = st.text_input("Street name / address", value=order.get("street", ""),
+                street = st.text_input("Street name / address", value=prefill("street"),
                                        key=f"{entry}_street")
-            building = st.text_input("Building / unit", value=order.get("building", ""),
+            building = st.text_input("Building / unit", value=prefill("building"),
                                      key=f"{entry}_building")
-            address2 = st.text_input("Address line 2", value=order.get("address2", ""),
+            address2 = st.text_input("Address line 2", value=prefill("address2"),
                                      key=f"{entry}_address2")
             address3 = st.text_input("Address line 3", value=order.get("address3", ""),
                                      key=f"{entry}_address3")
             c1, c2 = st.columns(2)
             with c1:
-                city = st.text_input("City", value=order.get("city", ""), key=f"{entry}_city")
-                postal_code = st.text_input("Postal code", value=order.get("postal_code", ""),
+                city = st.text_input("City", value=prefill("city"), key=f"{entry}_city")
+                postal_code = st.text_input("Postal code", value=prefill("postal_code"),
                                              key=f"{entry}_postal")
             with c2:
-                province = st.text_input("Province (e.g. ON)", value=order.get("province", ""),
+                province = st.text_input("Province (e.g. ON)", value=prefill("province"),
                                           key=f"{entry}_province")
-                country = st.text_input("Country (CA)", value=order.get("country", ""),
+                country = st.text_input("Country (CA)", value=prefill("country"),
                                          key=f"{entry}_country")
             phone = st.text_input("Phone", value=order.get("phone", ""), key=f"{entry}_phone")
 
