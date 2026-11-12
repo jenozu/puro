@@ -43,3 +43,9 @@ Only after Stage B passes, IT/company policy permits it, carrier account configu
 ## Release gate
 
 Task 12 may be marked **done** only with operator sign-off documenting: authorized API access, real Development integration and PDF output, actual approved Production shipment, confirmed Ship To, printed/scanned label, duplicate/reconciliation handling and acceptable security/storage policies. Without all checks, Puro is **not production-ready**.
+
+## Validation log (non-sensitive results only)
+
+- **Stage A (offline, carrier off): passed** on the Windows workstation with fictional orders. Import, address review gating, Ready revocation on edit, restart persistence and the absence of an enabled create control were confirmed.
+- **Stage B step 1-2 (Development, validate only): passed.** Development WSDL endpoints verified; one ValidateShipment returned ValidShipment true with no errors; nothing was created.
+- **Stage B steps 3-8 (create, label, printer, reconciliation): pending.** Task 12 stays pending until every release-gate item is signed off.
