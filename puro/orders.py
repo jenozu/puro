@@ -16,6 +16,7 @@ from typing import Any
 import pandas as pd
 
 from .address import shipping_errors
+from .address_suggest import suggest_address
 
 
 class ImportProblem(ValueError):
@@ -234,7 +235,10 @@ def parse_export(file_bytes: bytes, filename: str) -> ParsedImport:
                         "address3", "city", "province", "postal_code", "country"):
                 record[key] = ""
             name = record["customer_name"].strip()
-            record["cash_sale"] = bool(re.fullmatch(r"cash\s+sale", name, re.I))
+            record["cash_sale"] = bool(
+                re.fullmatch(r"cash\s+sale", name, re.I)
+                or re.match(r"cash", record["card_code"].strip(), re.I)
+            )
             if not record["cash_sale"]:
                 record["ship_to_name"] = name
             else:
@@ -244,6 +248,14 @@ def parse_export(file_bytes: bytes, filename: str) -> ParsedImport:
                     record["full_ship_to_address"][:match.start()].strip(" ,;-")
                     if match else ""
                 )
+            # Display-only pre-fill for the review form. These suggestions are never copied
+            # into the real address fields; the operator must still save and attest them.
+            suggestion = suggest_address(
+                record["full_ship_to_address"], cash_sale=record["cash_sale"]
+            )
+            record["suggested_address"] = suggestion
+            if record["cash_sale"] and suggestion["ship_to_name"]:
+                record["suggested_cash_recipient"] = suggestion["ship_to_name"]
             # Even regular customer names do not mean the street/city can be guessed.
             record["address_review_pending"] = True
         else:

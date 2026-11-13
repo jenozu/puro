@@ -179,6 +179,8 @@ class Store:
             current.update({k: v for k, v in values.items() if k in allowed})
             if current.get("full_ship_to_address"):
                 current["address_review_pending"] = True
+                # Stop pre-filling from suggestions once the operator has saved a draft.
+                current["address_draft_saved"] = True
             db.execute(
                 """UPDATE orders SET data_json=?, status='needs_review',
                    updated_at=?, reviewed_at=NULL WHERE doc_entry=?""",

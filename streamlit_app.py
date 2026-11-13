@@ -49,6 +49,15 @@ view = st.sidebar.radio(
 st.sidebar.caption("v0.1 development increment · Local SQLite · No SAP login needed")
 
 
+def whole(value) -> int | None:
+    """Saved weight/dimension as a whole number, or None so the box starts blank."""
+    try:
+        number = float(value)
+    except (TypeError, ValueError):
+        return None
+    return int(-(-number // 1)) if number > 0 else None
+
+
 def frame() -> pd.DataFrame:
     items = store.list_orders()
     return pd.DataFrame([
@@ -193,55 +202,66 @@ elif view == "Review a shipment":
                     "Check all values manually: no inferred address is approved automatically."
                 )
 
+        suggestion = order.get("suggested_address") or {}
+        use_suggestion = bool(suggestion) and not order.get("address_draft_saved")
+
+        def prefill(key: str) -> str:
+            """Saved value first; otherwise a display-only suggestion until a draft is saved."""
+            return order.get(key, "") or (suggestion.get(key, "") if use_suggestion else "")
+
+        if use_suggestion:
+            st.info(
+                "The address fields below are PRE-FILLED from the SAP text. Compare each "
+                "one with the original above, correct anything wrong, then click Save draft. "
+                "Nothing is approved until you confirm it."
+            )
+            for note in suggestion.get("notes", []):
+                st.warning(note)
         with st.form(f"review_{entry}"):
             st.markdown("#### Recipient / Ship To")
             name = st.text_input("Ship To recipient name", value=order.get("ship_to_name") or order.get("suggested_cash_recipient", ""),
                                  key=f"{entry}_name")
             c1, c2 = st.columns([1, 3])
             with c1:
-                street_no = st.text_input("Street number", value=order.get("street_no", ""),
+                street_no = st.text_input("Street number", value=prefill("street_no"),
                                           key=f"{entry}_streetno")
             with c2:
-                street = st.text_input("Street name / address", value=order.get("street", ""),
+                street = st.text_input("Street name / address", value=prefill("street"),
                                        key=f"{entry}_street")
-            building = st.text_input("Building / unit", value=order.get("building", ""),
+            building = st.text_input("Building / unit", value=prefill("building"),
                                      key=f"{entry}_building")
-            address2 = st.text_input("Address line 2", value=order.get("address2", ""),
+            address2 = st.text_input("Address line 2", value=prefill("address2"),
                                      key=f"{entry}_address2")
             address3 = st.text_input("Address line 3", value=order.get("address3", ""),
                                      key=f"{entry}_address3")
             c1, c2 = st.columns(2)
             with c1:
-                city = st.text_input("City", value=order.get("city", ""), key=f"{entry}_city")
-                postal_code = st.text_input("Postal code", value=order.get("postal_code", ""),
+                city = st.text_input("City", value=prefill("city"), key=f"{entry}_city")
+                postal_code = st.text_input("Postal code", value=prefill("postal_code"),
                                              key=f"{entry}_postal")
             with c2:
-                province = st.text_input("Province (e.g. ON)", value=order.get("province", ""),
+                province = st.text_input("Province (e.g. ON)", value=prefill("province"),
                                           key=f"{entry}_province")
-                country = st.text_input("Country (CA)", value=order.get("country", ""),
+                country = st.text_input("Country (CA)", value=prefill("country"),
                                          key=f"{entry}_country")
-            phone = st.text_input("Phone", value=order.get("phone", ""), key=f"{entry}_phone")
+            phone = st.text_input("Phone (optional)", value=order.get("phone", ""), key=f"{entry}_phone")
 
             st.markdown("#### Physically packed carton")
             st.caption("The initial review increment supports one parcel. Use measured "
                        "package dimensions, not item-master dimensions.")
             p1, p2, p3, p4 = st.columns(4)
             with p1:
-                weight = st.number_input("Weight (lb)", min_value=0.0,
-                                         value=float(order.get("weight_lb", 0)), step=0.5,
-                                         key=f"{entry}_weight")
+                weight = st.number_input("Weight (lb)", min_value=1, step=1, value=whole(order.get("weight_lb")),
+                                     placeholder="whole number", key=f"{entry}_weight")
             with p2:
-                length = st.number_input("Length (in)", min_value=0.0,
-                                         value=float(order.get("length_in", 0)), step=1.0,
-                                         key=f"{entry}_length")
+                length = st.number_input("Length (in)", min_value=1, step=1, value=whole(order.get("length_in")),
+                                     placeholder="whole number", key=f"{entry}_length")
             with p3:
-                width = st.number_input("Width (in)", min_value=0.0,
-                                        value=float(order.get("width_in", 0)), step=1.0,
-                                        key=f"{entry}_width")
+                width = st.number_input("Width (in)", min_value=1, step=1, value=whole(order.get("width_in")),
+                                     placeholder="whole number", key=f"{entry}_width")
             with p4:
-                height = st.number_input("Height (in)", min_value=0.0,
-                                         value=float(order.get("height_in", 0)), step=1.0,
-                                         key=f"{entry}_height")
+                height = st.number_input("Height (in)", min_value=1, step=1, value=whole(order.get("height_in")),
+                                     placeholder="whole number", key=f"{entry}_height")
             service = st.selectbox(
                 "Requested service (NOT yet verified with Purolator)",
                 ["PurolatorGround", "PurolatorExpress"],
@@ -264,9 +284,9 @@ elif view == "Review a shipment":
                         "ship_to_name": name, "street_no": street_no, "street": street,
                         "building": building, "address2": address2, "address3": address3,
                         "city": city, "province": province.upper(), "postal_code": postal_code,
-                        "country": country.upper(), "phone": phone,
-                        "weight_lb": weight, "length_in": length, "width_in": width,
-                        "height_in": height, "pieces": 1, "service": service, "payer": payer,
+                        "country": country.upper(), "phone": phone.strip(),
+                        "weight_lb": weight or 0, "length_in": length or 0, "width_in": width or 0,
+                        "height_in": height or 0, "pieces": 1, "service": service, "payer": payer,
                         "receiver_account": receiver_account,
                     })
                     st.success("Draft saved. Review and confirm its details below.")

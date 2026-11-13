@@ -87,9 +87,17 @@ def test_no_default_pickup_guess():
         create_request(order(), config(), pickup_type="")
 
 
-def test_missing_phone_blocks_preflight():
+def test_missing_receiver_phone_is_allowed_and_omitted():
     row = order()
     row["phone"] = ""
+    request = create_request(row, config(), pickup_type="DropOff")
+    receiver = request["Shipment"]["ReceiverInformation"]
+    assert "PhoneNumber" not in receiver
+
+
+def test_malformed_receiver_phone_still_blocks_preflight():
+    row = order()
+    row["phone"] = "555"
     with pytest.raises(ShipmentValidationError, match="ten-digit"):
         create_request(row, config(), pickup_type="DropOff")
 
