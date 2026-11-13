@@ -49,6 +49,15 @@ view = st.sidebar.radio(
 st.sidebar.caption("v0.1 development increment · Local SQLite · No SAP login needed")
 
 
+def whole(value) -> int | None:
+    """Saved weight/dimension as a whole number, or None so the box starts blank."""
+    try:
+        number = float(value)
+    except (TypeError, ValueError):
+        return None
+    return int(-(-number // 1)) if number > 0 else None
+
+
 def frame() -> pd.DataFrame:
     items = store.list_orders()
     return pd.DataFrame([
@@ -235,28 +244,24 @@ elif view == "Review a shipment":
                                           key=f"{entry}_province")
                 country = st.text_input("Country (CA)", value=prefill("country"),
                                          key=f"{entry}_country")
-            phone = st.text_input("Phone", value=order.get("phone", ""), key=f"{entry}_phone")
+            phone = st.text_input("Phone (optional)", value=order.get("phone", ""), key=f"{entry}_phone")
 
             st.markdown("#### Physically packed carton")
             st.caption("The initial review increment supports one parcel. Use measured "
                        "package dimensions, not item-master dimensions.")
             p1, p2, p3, p4 = st.columns(4)
             with p1:
-                weight = st.number_input("Weight (lb)", min_value=0.0,
-                                         value=float(order.get("weight_lb", 0)), step=0.5,
-                                         key=f"{entry}_weight")
+                weight = st.number_input("Weight (lb)", min_value=1, step=1, value=whole(order.get("weight_lb")),
+                                     placeholder="whole number", key=f"{entry}_weight")
             with p2:
-                length = st.number_input("Length (in)", min_value=0.0,
-                                         value=float(order.get("length_in", 0)), step=1.0,
-                                         key=f"{entry}_length")
+                length = st.number_input("Length (in)", min_value=1, step=1, value=whole(order.get("length_in")),
+                                     placeholder="whole number", key=f"{entry}_length")
             with p3:
-                width = st.number_input("Width (in)", min_value=0.0,
-                                        value=float(order.get("width_in", 0)), step=1.0,
-                                        key=f"{entry}_width")
+                width = st.number_input("Width (in)", min_value=1, step=1, value=whole(order.get("width_in")),
+                                     placeholder="whole number", key=f"{entry}_width")
             with p4:
-                height = st.number_input("Height (in)", min_value=0.0,
-                                         value=float(order.get("height_in", 0)), step=1.0,
-                                         key=f"{entry}_height")
+                height = st.number_input("Height (in)", min_value=1, step=1, value=whole(order.get("height_in")),
+                                     placeholder="whole number", key=f"{entry}_height")
             service = st.selectbox(
                 "Requested service (NOT yet verified with Purolator)",
                 ["PurolatorGround", "PurolatorExpress"],
@@ -279,9 +284,9 @@ elif view == "Review a shipment":
                         "ship_to_name": name, "street_no": street_no, "street": street,
                         "building": building, "address2": address2, "address3": address3,
                         "city": city, "province": province.upper(), "postal_code": postal_code,
-                        "country": country.upper(), "phone": phone,
-                        "weight_lb": weight, "length_in": length, "width_in": width,
-                        "height_in": height, "pieces": 1, "service": service, "payer": payer,
+                        "country": country.upper(), "phone": phone.strip(),
+                        "weight_lb": weight or 0, "length_in": length or 0, "width_in": width or 0,
+                        "height_in": height or 0, "pieces": 1, "service": service, "payer": payer,
                         "receiver_account": receiver_account,
                     })
                     st.success("Draft saved. Review and confirm its details below.")

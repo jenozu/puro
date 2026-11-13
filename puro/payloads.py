@@ -24,8 +24,12 @@ PICKUP_TYPES = frozenset({"DropOff", "PreScheduled"})
 PAYER_TYPES = frozenset({"Sender", "Receiver"})
 
 
-def _phone(value: str) -> dict[str, str]:
+def _phone(value: str, *, required: bool = True) -> dict[str, str] | None:
     # Strict Canadian/NANP phone parsing; do not invent a carrier contact number.
+    # A blank value is allowed only where the caller says the phone is optional
+    # (receiver). A non-blank but malformed number is always an error.
+    if not required and not str(value).strip():
+        return None
     digits = re.sub(r"\D", "", str(value))
     if len(digits) == 11 and digits[0] == "1":
         digits = digits[1:]
@@ -74,7 +78,7 @@ def _receiver(order: dict[str, Any]) -> dict[str, Any]:
         dest = recipient_snapshot(order)
     except AddressProblem as exc:
         raise ShipmentValidationError(str(exc)) from None
-    return {
+    address: dict[str, Any] = {
         "Name": dest["name"],
         "StreetNumber": dest["street_number"],
         "StreetName": dest["street"],
@@ -85,8 +89,11 @@ def _receiver(order: dict[str, Any]) -> dict[str, Any]:
         "Province": dest["province"],
         "Country": dest["country"],
         "PostalCode": dest["postal_code"],
-        "PhoneNumber": _phone(dest["phone"]),
     }
+    phone = _phone(dest["phone"], required=False)
+    if phone is not None:
+        address["PhoneNumber"] = phone
+    return address
 
 
 def _piece(package: dict[str, Any]) -> dict[str, Any]:

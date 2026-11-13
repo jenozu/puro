@@ -161,6 +161,11 @@ def test_review_form_shows_prefill_but_saves_nothing_until_operator_saves(monkey
     assert by_key["201_province"] == "ON" and by_key["201_postal"] == "K1A 0B1"
     assert by_key["201_country"] == "CA"
     assert any("PRE-FILLED" in item.value for item in app.info)
+    # Weight/dimensions start blank (whole numbers only) and phone is optional.
+    numbers = {w.key: w.value for w in app.number_input}
+    for key in ("201_weight", "201_length", "201_width", "201_height"):
+        assert numbers[key] is None
+    assert any(w.label == "Phone (optional)" for w in app.text_input)
 
     # Showing suggestions saved nothing and approved nothing.
     saved = store.get_order("201")
