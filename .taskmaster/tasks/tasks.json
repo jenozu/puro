@@ -259,6 +259,19 @@
           11
         ],
         "subtasks": []
+      },
+      {
+        "id": 20,
+        "title": "Pre-fill the review form from the SAP address text",
+        "description": "Parse FullShipToAddress into suggested street, unit, city, province, postal code, country and (cash sale) recipient name so the operator only enters package details.",
+        "details": "puro/address_suggest.py produces display-only suggestions with notes for anything uncertain (single-line text, PO box, missing postal code, non-Canadian country). Suggestions never replace the real address fields and never approve an order: Save draft plus the address attestation are still required. Cash sale is detected from the customer code (starts with CASH) or the name. Pre-fill stops once a draft has been saved. Phone is not in the export and is still entered by the operator; remembering it per customer is a possible follow-up.",
+        "testStrategy": "Parser tests with fictional addresses (multi-line, single-line, unit prefix, direction, ST-city, cash sale, PO box, unparseable); importer test that suggestions never populate real fields; Streamlit form test showing pre-filled fields while the order stays needs_review and Ready stays disabled.",
+        "status": "done",
+        "priority": "medium",
+        "dependencies": [
+          11
+        ],
+        "subtasks": []
       }
     ]
   }
